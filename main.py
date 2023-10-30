@@ -3,7 +3,7 @@ import sqlite3
 import logging
 import json
 
-discord.utils.setup_logging(level=logging.INFO)
+discord.utils.setup_logging()
 
 # logger setup
 discord_logger = logging.getLogger('discord')
@@ -93,8 +93,8 @@ async def on_message(message):
                                                {'user_id': user_id}).fetchone()[0]
 
                 bot_logger.debug('update count from user')
-                cursor.execute("update users set count = :count",
-                               {'count': current_count + count})
+                cursor.execute("update users set count = :count where user_id = :user_id",
+                               {'count': current_count + count, 'user_id': user_id})
         else:
             with sqlite_connection:
                 bot_logger.info('inserting new user')
