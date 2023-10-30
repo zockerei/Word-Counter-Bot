@@ -1,2 +1,4 @@
 .idea/
 users.db
+logger.log
+sqlite3.exe
