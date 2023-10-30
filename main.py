@@ -3,23 +3,32 @@ import sqlite3
 import logging
 import json
 
+discord.utils.setup_logging(level=logging.INFO)
+
 # logger setup
-logging.basicConfig(filename='logger.log',
-                    level=logging.DEBUG,
-                    format='%(asctime)s %(message)s',
-                    datefmt='%Y-%m-%d %H:%M:%S'
-                    )
-handler = logging.FileHandler(filename='logger.log',
-                              encoding='utf-8'
+discord_logger = logging.getLogger('discord')
+discord_logger.setLevel(logging.INFO)
+bot_logger = logging.getLogger('discord.bot')
+bot_logger.setLevel(logging.DEBUG)
+
+fileHandler = logging.FileHandler(filename='logger.log',
+                                  encoding='utf-8',
+                                  mode='w'
+                                  )
+formatter = logging.Formatter('[{asctime}] [{levelname:<8}] {name}: {message}',
+                              '%Y-%m-%d %H:%M:%S',
+                              style='{'
                               )
+fileHandler.setFormatter(formatter)
+logging.root.addHandler(fileHandler)
 
 # intents
 intents = discord.Intents.all()
 client = discord.Client(intents=intents)
 
-logging.info('loading json')
+bot_logger.debug('loading json')
 with open('config.json') as file:
-    logging.debug('file opened')
+    bot_logger.debug('file opened')
     data = json.load(file)
     token = data['Token']
     word = data['Word']
@@ -27,76 +36,75 @@ with open('config.json') as file:
 
 @client.event
 async def on_ready():
-    """Login and setup database"""
-    logging.info(f'Logged in as {client.user}')
+    """Login and database setup"""
+    bot_logger.info(f'Logged in as {client.user}')
 
     try:
-        logging.debug('setting up sql connection')
+        bot_logger.debug('setting up sql connection')
         sqlite_connection = sqlite3.connect('users.db')
         cursor = sqlite_connection.cursor()
 
         with sqlite_connection:
-            logging.debug('creating table if not exists')
+            bot_logger.debug('creating table if not exists')
             cursor.execute("""create table if not exists users (
                             user_id integer primary key,
                             count integer
                             )""")
-        logging.info('Database ready')
     except sqlite3.Error as error:
-        logging.error(f'Connection to database failed: {error}')
+        bot_logger.error(f'Connection to database failed: {error}')
     else:
         if sqlite_connection:
             sqlite_connection.close()
-            logging.info('Connection closed')
+            bot_logger.info('Database ready and connection closed')
 
 
 @client.event
 async def on_message(message):
     """Check message for the word and add it to the database"""
     if message.author == client.user:
-        logging.info('message is from author')
+        bot_logger.info('message is from author')
         return
 
     try:
-        logging.debug('setting up sql connection')
+        bot_logger.debug('setting up sql connection')
         message_content = message.content.lower()
         sqlite_connection = sqlite3.connect('users.db')
         cursor = sqlite_connection.cursor()
 
         if word not in message_content:
-            logging.info('word not found in message')
+            bot_logger.info('word not found in message')
             return
 
-        logging.info('word found in message')
+        bot_logger.info('word found in message')
         count = message_content.count(word)
         user_id = message.author.id
 
         with sqlite_connection:
-            logging.debug('select user_id')
+            bot_logger.debug('select user_id')
             cursor.execute("select user_id from users where user_id = :user_id",
                            {'user_id': user_id})
 
         if cursor.fetchall():
             """if user is already in database, sum count"""
-            logging.info('user is in database. Updating...')
+            bot_logger.info('user is in database. Updating...')
             with sqlite_connection:
-                logging.debug('get count')
+                bot_logger.debug('get count')
                 current_count = cursor.execute("select count from users where user_id = :user_id",
                                                {'user_id': user_id}).fetchone()[0]
 
-                logging.debug('update count from user')
+                bot_logger.debug('update count from user')
                 cursor.execute("update users set count = :count",
                                {'count': current_count + count})
         else:
             with sqlite_connection:
-                logging.info('inserting new user')
+                bot_logger.info('inserting new user')
                 cursor.execute("insert into users values (:user_id, :count)",
                                {'user_id': user_id, 'count': count})
     except sqlite3.Error as error:
-        logging.error(f'Working with Database failed {error}')
+        bot_logger.error(f'Working with Database failed {error}')
     else:
         if sqlite_connection:
             sqlite_connection.close()
-            logging.info('Connection closed')
+            bot_logger.info('Connection to database closed')
 
-client.run(token, log_handler=handler)
+client.run(token, log_handler=None)
