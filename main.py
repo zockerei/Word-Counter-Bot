@@ -1,33 +1,42 @@
 import discord
 import sqlite3
-import logging
+import logging.config
 import json
+import yaml
 
-discord.utils.setup_logging()
+# import logging_config
+with open('logging_config.yaml', 'rt') as config_file:
+    config = yaml.safe_load(config_file.read())
 
-# logger setup
+# logging setup
+logging.config.dictConfig(config)
 discord_logger = logging.getLogger('discord')
+bot_logger = logging.getLogger('bot.main')
+"""
 discord_logger.setLevel(logging.INFO)
-bot_logger = logging.getLogger('discord.bot')
 bot_logger.setLevel(logging.DEBUG)
-
-fileHandler = logging.FileHandler(filename='logger.log',
-                                  encoding='utf-8',
-                                  mode='w'
-                                  )
+stream_handler = logging.StreamHandler()
+file_handler = logging.FileHandler(filename='logger.log',
+                                   encoding='utf-8',
+                                   mode='w'
+                                   )
 formatter = logging.Formatter('[{asctime}] [{levelname:<8}] {name}: {message}',
                               '%Y-%m-%d %H:%M:%S',
                               style='{'
                               )
-fileHandler.setFormatter(formatter)
-logging.root.addHandler(fileHandler)
+file_handler.setFormatter(formatter)
+stream_handler.setFormatter(formatter)
+logging.root.addHandler(file_handler)
+logging.root.addHandler(stream_handler)
+"""
 
 # intents
 intents = discord.Intents.all()
 client = discord.Client(intents=intents)
 
+# load json
 bot_logger.debug('loading json')
-with open('config.json') as file:
+with open('bot_config.json') as file:
     bot_logger.debug('file opened')
     data = json.load(file)
     token = data['Token']

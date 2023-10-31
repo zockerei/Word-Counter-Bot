@@ -1,4 +1,5 @@
 .idea/
 users.db
+bot_config.json
 logger.log
 sqlite3.exe
