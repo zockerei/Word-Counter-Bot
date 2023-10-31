@@ -1,70 +1,40 @@
 import discord
 import sqlite3
 import logging.config
-import json
 import yaml
+import sql
 
 # import logging_config
 with open('logging_config.yaml', 'rt') as config_file:
-    config = yaml.safe_load(config_file.read())
+    logging_config = yaml.safe_load(config_file.read())
+
+sql_statements = sql.SqlStatements()
 
 # logging setup
-logging.config.dictConfig(config)
+sql_statements.logging_setup(logging_config)
+logging.config.dictConfig(logging_config)
 discord_logger = logging.getLogger('discord')
 bot_logger = logging.getLogger('bot.main')
-"""
-discord_logger.setLevel(logging.INFO)
-bot_logger.setLevel(logging.DEBUG)
-stream_handler = logging.StreamHandler()
-file_handler = logging.FileHandler(filename='logger.log',
-                                   encoding='utf-8',
-                                   mode='w'
-                                   )
-formatter = logging.Formatter('[{asctime}] [{levelname:<8}] {name}: {message}',
-                              '%Y-%m-%d %H:%M:%S',
-                              style='{'
-                              )
-file_handler.setFormatter(formatter)
-stream_handler.setFormatter(formatter)
-logging.root.addHandler(file_handler)
-logging.root.addHandler(stream_handler)
-"""
+bot_logger.debug('logging setup complete')
+
 
 # intents
 intents = discord.Intents.all()
 client = discord.Client(intents=intents)
 
 # load json
-bot_logger.debug('loading json')
-with open('bot_config.json') as file:
-    bot_logger.debug('file opened')
-    data = json.load(file)
-    token = data['Token']
-    word = data['Word']
+with open('bot_config.yaml') as config_file:
+    bot_config = yaml.safe_load(config_file.read())
+    token = bot_config['token']
+    word = bot_config['word']
+bot_logger.debug('bot_config loaded')
 
 
 @client.event
 async def on_ready():
     """Login and database setup"""
     bot_logger.info(f'Logged in as {client.user}')
-
-    try:
-        bot_logger.debug('setting up sql connection')
-        sqlite_connection = sqlite3.connect('users.db')
-        cursor = sqlite_connection.cursor()
-
-        with sqlite_connection:
-            bot_logger.debug('creating table if not exists')
-            cursor.execute("""create table if not exists users (
-                            user_id integer primary key,
-                            count integer
-                            )""")
-    except sqlite3.Error as error:
-        bot_logger.error(f'Connection to database failed: {error}')
-    else:
-        if sqlite_connection:
-            sqlite_connection.close()
-            bot_logger.info('Database ready and connection closed')
+    sql_statements.create_table()
 
 
 @client.event
