@@ -1,5 +1,6 @@
 .idea/
 users.db
-bot_config.json
+bot_config.yaml
 logger.log
 sqlite3.exe
+__pycache__/
