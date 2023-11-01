@@ -3,11 +3,11 @@ import logging.config
 import yaml
 import sql
 
+sql_statements = sql.SqlStatements()
+
 # import logging_config
 with open('logging_config.yaml', 'rt') as config_file:
     logging_config = yaml.safe_load(config_file.read())
-
-sql_statements = sql.SqlStatements()
 
 # logging setup
 logging.config.dictConfig(logging_config)
@@ -41,6 +41,7 @@ async def on_message(message):
         bot_logger.info('message is from author')
         return
 
+    # check if message has word
     message_content = message.content.lower()
     if word not in message_content:
         bot_logger.info('word not found in message')
