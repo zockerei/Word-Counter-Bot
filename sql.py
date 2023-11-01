@@ -1,15 +1,9 @@
 import logging.config
 import sqlite3
-import yaml
 
 
 class SqlStatements:
-    # import logging_config
-    with open('logging_config.yaml', 'rt') as config_file:
-        logging_config = yaml.safe_load(config_file.read())
-
     # logging setup
-    logging.config.dictConfig(logging_config)
     sql_logger = logging.getLogger('bot.sql')
     sql_logger.debug('logging setup complete')
 
