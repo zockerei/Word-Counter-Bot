@@ -80,6 +80,12 @@ async def on_message(message):
 
         return
 
+    if message_content.startswith('/hc' or '/highestCount'):
+        """get the highest count from all users"""
+        bot_logger.debug('Get highest count of user')
+        print(sql_statements.get_highest_count())
+        return
+
     # check if message has word
     if word not in message_content:
         bot_logger.info('Word not found in message')
