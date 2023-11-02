@@ -1,3 +1,4 @@
+import argparse
 import discord
 import logging.config
 import yaml
@@ -16,17 +17,30 @@ discord_logger = logging.getLogger('discord')
 bot_logger = logging.getLogger('bot.main')
 bot_logger.debug('Logging setup complete')
 
+# argument parser
+bot_logger.debug('Setting up argument parser')
+parser = argparse.ArgumentParser(description='Word-Counter-Bot')
+
+parser.add_argument(
+    '-p', '--path',
+    help='Path to config file .yaml',
+    required=True
+)
+
+config_path = parser.parse_args().path
+bot_logger.debug('Got arguments successfully')
+
 # intents
 intents = discord.Intents.all()
 client = discord.Client(intents=intents)
 
 # load json
-with open('bot_config.yaml') as config_file:
+with open(config_path) as config_file:
     bot_config = yaml.safe_load(config_file.read())
     token = bot_config['token']
     word = bot_config['word']
     server_id = bot_config['server_id']
-bot_logger.debug('bot_config loaded')
+bot_logger.info('bot_config loaded')
 
 
 def get_convert_id(message):
