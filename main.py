@@ -99,10 +99,10 @@ async def on_message(message):
             title=f'Highest count from user'
         )
         username = await client.fetch_user(highest_count_tuple[0])
-        highest_count_embed.add_description(f"""
-        The user who has said {word} the most is ||{username}||\n
-        With an impressive amount of {highest_count_tuple[1]} times
-        """)
+        highest_count_embed.add_description(
+            f"""The user who has said {word} the most is ||{username}||\n
+            With an impressive amount of {highest_count_tuple[1]} times"""
+        )
         await message.channel.send(embed=highest_count_embed)
 
         return
