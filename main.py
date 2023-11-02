@@ -29,9 +29,12 @@ with open('bot_config.yaml') as config_file:
 bot_logger.debug('bot_config loaded')
 
 
-def convert_mention(mention):
-    """convert mention user_id to normal user_id"""
-    bot_logger.debug('converting mention')
+def get_convert_id(message):
+    """get user id from message"""
+    bot_logger.debug('Split message mention')
+    mention = message.split(' ')[1]
+
+    bot_logger.debug('Convert message')
     mention = mention.replace('<', '')
     mention = mention.replace('>', '')
     mention = mention.replace('@', '')
@@ -67,13 +70,16 @@ async def on_message(message):
     if message_content.startswith('/c' or '/count'):
         # get count of user
         bot_logger.info('Get count of user')
-        converted_user_id = convert_mention(message_content.split(' ')[1])
+        converted_user_id = get_convert_id(message_content)
         count_user_id = sql_statements.get_count(converted_user_id)
         username = await client.fetch_user(converted_user_id)
 
         # send message with count
         bot_logger.debug('Creating count embed')
-        count_embed = embed.EmbedBuilder(client.user.avatar, title=f'Count from {username}')
+        count_embed = embed.EmbedBuilder(
+            client.user.avatar,
+            title=f'Count from {username}'
+        )
         count_embed.add_description(f'{username} has said {word} {count_user_id} times')
         await message.channel.send(embed=count_embed)
         bot_logger.debug('Count message sent')
@@ -82,8 +88,23 @@ async def on_message(message):
 
     if message_content.startswith('/hc' or '/highestCount'):
         """get the highest count from all users"""
+
+        # get the highest count
         bot_logger.debug('Get highest count of user')
-        print(sql_statements.get_highest_count())
+        highest_count_tuple = sql_statements.get_highest_count_tuple()
+
+        # make embed
+        highest_count_embed = embed.EmbedBuilder(
+            client.user.avatar,
+            title=f'Highest count from user'
+        )
+        username = await client.fetch_user(highest_count_tuple[0])
+        highest_count_embed.add_description(f"""
+        The user who has said {word} the most is ||{username}||\n
+        With an impressive amount of {highest_count_tuple[1]} times
+        """)
+        await message.channel.send(embed=highest_count_embed)
+
         return
 
     # check if message has word

@@ -50,15 +50,15 @@ class SqlStatements:
         return count
 
     @staticmethod
-    def get_highest_count():
+    def get_highest_count_tuple():
         """get user with the highest count"""
         SqlStatements._sql_logger.debug('Get user with highest count')
         with SqlStatements._sqlite_connection:
-            highest_count = SqlStatements._cursor.execute(
+            highest_count_tuple = SqlStatements._cursor.execute(
                 "select * from users where count = (select max(count) from users)"
             ).fetchone()
-        SqlStatements._sql_logger.debug(f'Got highest count: {highest_count}')
-        return highest_count
+        SqlStatements._sql_logger.debug(f'Got highest count: {highest_count_tuple}')
+        return highest_count_tuple
 
     @staticmethod
     def insert_new_user(user_id, count):

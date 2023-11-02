@@ -17,9 +17,9 @@ class EmbedBuilder:
         )
         self._embed.set_footer(text='placeholder for highest count')
         self._embed.set_thumbnail(url=thumbnail_url)
+
     # logging setup
     _embed_logger = logging.getLogger('bot.embed')
-
     _embed_logger.debug('Embed logger set up')
 
     def add_description(self, description):

@@ -3,4 +3,4 @@ __pycache__/
 users.db
 logger.log
 sqlite3.exe
-
+bot_config.yaml
