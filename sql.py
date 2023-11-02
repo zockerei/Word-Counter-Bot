@@ -22,10 +22,11 @@ class SqlStatements:
         SqlStatements._sql_logger.debug('In create table')
         with SqlStatements._sqlite_connection:
             SqlStatements._sql_logger.debug('Creating table if not exists')
-            SqlStatements._cursor.execute("""create table if not exists users (
-                            user_id integer primary key,
-                            count integer
-                            )""")
+            SqlStatements._cursor.execute(
+                """create table if not exists users (
+                user_id integer primary key,
+                count integer
+                )""")
 
     @staticmethod
     def add_guild_members(guild_members):
@@ -41,18 +42,33 @@ class SqlStatements:
         """get count of user_id"""
         SqlStatements._sql_logger.debug('Get count')
         with SqlStatements._sqlite_connection:
-            count = SqlStatements._cursor.execute("select count from users where user_id = :user_id",
-                                                  {'user_id': user_id}).fetchone()[0]
+            count = SqlStatements._cursor.execute(
+                "select count from users where user_id = :user_id",
+                {'user_id': user_id}
+            ).fetchone()[0]
             SqlStatements._sql_logger.info(f'User count is: {count}')
         return count
+
+    @staticmethod
+    def get_highest_count_tuple():
+        """get user with the highest count"""
+        SqlStatements._sql_logger.debug('Get user with highest count')
+        with SqlStatements._sqlite_connection:
+            highest_count_tuple = SqlStatements._cursor.execute(
+                "select * from users where count = (select max(count) from users)"
+            ).fetchone()
+        SqlStatements._sql_logger.debug(f'Got highest count: {highest_count_tuple}')
+        return highest_count_tuple
 
     @staticmethod
     def insert_new_user(user_id, count):
         """insert new user into database"""
         with SqlStatements._sqlite_connection:
             SqlStatements._sql_logger.debug(f'Inserting new user {user_id}')
-            SqlStatements._cursor.execute("insert into users values (:user_id, :count)",
-                                          {'user_id': user_id, 'count': count})
+            SqlStatements._cursor.execute(
+                "insert into users values (:user_id, :count)",
+                {'user_id': user_id, 'count': count}
+            )
             SqlStatements._sql_logger.info(f'User {user_id} inserted to database')
 
     @staticmethod
@@ -61,8 +77,10 @@ class SqlStatements:
         with SqlStatements._sqlite_connection:
             # get user_id
             SqlStatements._sql_logger.debug('Select user_id')
-            SqlStatements._cursor.execute("select user_id from users where user_id = :user_id",
-                                          {'user_id': user_id})
+            SqlStatements._cursor.execute(
+                "select user_id from users where user_id = :user_id",
+                {'user_id': user_id}
+            )
             SqlStatements._sql_logger.debug('User_id selected')
 
         if SqlStatements._cursor.fetchall():
@@ -81,7 +99,9 @@ class SqlStatements:
             # sum count
             current_count = SqlStatements.get_count(user_id)
 
-            SqlStatements._cursor.execute("update users set count = :count where user_id = :user_id",
-                                          {'count': current_count + count, 'user_id': user_id})
-            SqlStatements._sql_logger.info('Updated count of user')
+            SqlStatements._cursor.execute(
+                "update users set count = :count where user_id = :user_id",
+                {'count': current_count + count, 'user_id': user_id}
+            )
+            SqlStatements._sql_logger.info(f'Updated count of user: {current_count + count}')
         SqlStatements._sql_logger.debug('Exiting insert_update_user_count')

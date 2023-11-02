@@ -38,6 +38,6 @@ loggers:
     propagate: no
 
   bot.embed:
-    level: DEBUG
+    level: INFO
     handlers: [file, console]
     propagate: no

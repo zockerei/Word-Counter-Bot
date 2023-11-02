@@ -1,6 +1,6 @@
 .idea/
+__pycache__/
 users.db
-bot_config.yaml
 logger.log
 sqlite3.exe
-__pycache__/
+bot_config.yaml
