@@ -73,7 +73,7 @@ async def on_ready():
 
 @client.event
 async def on_message(message):
-    """All events with messages"""
+    """All events with messages (count, highest count, word counter)"""
     if message.author == client.user:
         # message comes from bot
         bot_logger.debug('Bot message')
@@ -82,7 +82,8 @@ async def on_message(message):
     message_content = message.content.lower()
 
     if message_content.startswith('/c' or '/count'):
-        # get count of user
+        """get count of user"""
+
         bot_logger.info('Get count of user')
         converted_user_id = get_convert_id(message_content)
         count_user_id = sql_statements.get_count(converted_user_id)
@@ -118,6 +119,7 @@ async def on_message(message):
             With an impressive amount of {highest_count_tuple[1]} times"""
         )
         await message.channel.send(embed=highest_count_embed)
+        bot_logger.debug('Highest count message sent')
 
         return
 

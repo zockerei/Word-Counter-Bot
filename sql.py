@@ -23,10 +23,23 @@ class SqlStatements:
         with SqlStatements._sqlite_connection:
             SqlStatements._sql_logger.debug('Creating table if not exists')
             SqlStatements._cursor.execute(
-                """create table if not exists users (
-                user_id integer primary key,
+                """create table if not exists user (
+                user_id integer primary key
+                )"""
+            )
+            SqlStatements._cursor.execute(
+                """create table if not exists user_has_word(
+                foreign key(user_id) references user(user_id),
+                foreign key(word_id) references word(word_id),
                 count integer
-                )""")
+                )"""
+            )
+            SqlStatements._cursor.execute(
+                """create table if not exists word (
+                id integer primary key,
+                word text
+                )"""
+            )
 
     @staticmethod
     def add_guild_members(guild_members):
