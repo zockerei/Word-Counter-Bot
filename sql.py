@@ -10,7 +10,7 @@ class SqlStatements:
     # sqlite connection
     try:
         _sql_logger.debug('Setting up sql connection')
-        _sqlite_connection = sqlite3.connect('users.db')
+        _sqlite_connection = sqlite3.connect('word_counter.db')
         _cursor = _sqlite_connection.cursor()
         _sql_logger.debug('Setup of sql connection complete')
     except sqlite3.Error as error:
@@ -21,24 +21,28 @@ class SqlStatements:
         """create table users for database"""
         SqlStatements._sql_logger.debug('In create table')
         with SqlStatements._sqlite_connection:
-            SqlStatements._sql_logger.debug('Creating table if not exists')
+            # user table
+            SqlStatements._sql_logger.debug('Creating table user')
             SqlStatements._cursor.execute(
                 """create table if not exists user (
-                user_id integer primary key
-                )"""
+                id integer primary key,
+                foreign key (id) references user_has_word (user_id)
+                );"""
             )
-            SqlStatements._cursor.execute(
-                """create table if not exists user_has_word(
-                foreign key(user_id) references user(user_id),
-                foreign key(word_id) references word(word_id),
-                count integer
-                )"""
-            )
+            SqlStatements._sql_logger.debug('Creating table word')
+            # word table
             SqlStatements._cursor.execute(
                 """create table if not exists word (
-                id integer primary key,
-                word text
-                )"""
+                word text primary key,
+                foreign key (word) references user_has_word (word_name)
+                );"""
+            )
+            SqlStatements._sql_logger.debug('Creating table user_has_word')
+            # user_has_word table
+            SqlStatements._cursor.execute(
+                """create table if not exists user_has_word (
+                count integer
+                );"""
             )
 
     @staticmethod
@@ -47,7 +51,7 @@ class SqlStatements:
         SqlStatements._sql_logger.debug('Inserting all users to database')
         for user_id in guild_members:
             if not SqlStatements.check_user(user_id):
-                SqlStatements.insert_new_user(user_id, 0)
+                SqlStatements.insert_new_user(user_id)
         SqlStatements._sql_logger.info('All members in database')
 
     @staticmethod
@@ -56,7 +60,7 @@ class SqlStatements:
         SqlStatements._sql_logger.debug('Get count')
         with SqlStatements._sqlite_connection:
             count = SqlStatements._cursor.execute(
-                "select count from users where user_id = :user_id",
+                "select count from word_counter where user_id = :user_id",
                 {'user_id': user_id}
             ).fetchone()[0]
             SqlStatements._sql_logger.info(f'User count is: {count}')
@@ -74,13 +78,13 @@ class SqlStatements:
         return highest_count_tuple
 
     @staticmethod
-    def insert_new_user(user_id, count):
+    def insert_new_user(user_id):
         """insert new user into database"""
         with SqlStatements._sqlite_connection:
             SqlStatements._sql_logger.debug(f'Inserting new user {user_id}')
             SqlStatements._cursor.execute(
-                "insert into users values (:user_id, :count)",
-                {'user_id': user_id, 'count': count}
+                "insert into user values (:user_id)",
+                {'user_id': user_id}
             )
             SqlStatements._sql_logger.info(f'User {user_id} inserted to database')
 
@@ -91,10 +95,10 @@ class SqlStatements:
             # get user_id
             SqlStatements._sql_logger.debug('Select user_id')
             SqlStatements._cursor.execute(
-                "select user_id from users where user_id = :user_id",
+                "select id from user where id = :user_id",
                 {'user_id': user_id}
             )
-            SqlStatements._sql_logger.debug('User_id selected')
+            SqlStatements._sql_logger.debug(f'User_id {user_id} selected')
 
         if SqlStatements._cursor.fetchall():
             # if user is already in database, return True
