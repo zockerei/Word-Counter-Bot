@@ -17,7 +17,7 @@ class SqlStatements:
         _sql_logger.error(f'Connection to database failed: {error}')
 
     @staticmethod
-    def test_setup():
+    def test():
         """dropping tables"""
         # drop table
         SqlStatements._cursor.execute('drop table user')
@@ -175,7 +175,7 @@ class SqlStatements:
 if __name__ == '__main__':
     """testing for sql statements (will be replaced with unit testing (probably))"""
     # test setup
-    SqlStatements.test_setup()
+    SqlStatements.test()
 
     # get count test
     print(SqlStatements.get_count(372045873095639040, 'test'))
