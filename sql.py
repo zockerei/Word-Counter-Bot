@@ -74,6 +74,20 @@ class SqlStatements:
             )
 
     @staticmethod
+    def add_words(words):
+        """add all words to database"""
+        SqlStatements._sql_logger.debug('Inserting all words to database')
+        for word in words:
+            # add check for unique
+            SqlStatements._cursor.execute(
+                "insert into word values (:word)",
+                {'word': word}
+            )
+            SqlStatements._sql_logger.debug(f'added word {word} into database')
+
+        SqlStatements._sql_logger.info('All words in database')
+
+    @staticmethod
     def add_guild_members(guild_members):
         """add all server members to database"""
         SqlStatements._sql_logger.debug('Inserting all users to database')

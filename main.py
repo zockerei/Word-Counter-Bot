@@ -38,7 +38,7 @@ client = discord.Client(intents=intents)
 with open(config_path) as config_file:
     bot_config = yaml.safe_load(config_file.read())
     token = bot_config['token']
-    word = bot_config['word']
+    words = bot_config['word']
     server_id = bot_config['server_id']
 bot_logger.info('bot_config loaded')
 
@@ -60,7 +60,10 @@ def get_convert_id(message):
 async def on_ready():
     """Login and database setup"""
     bot_logger.info(f'Logged in as {client.user}')
+
+    # create sql table and add words
     sql_statements.create_table()
+    sql_statements.add_words(words)
 
     # get server member ids and add them all to the database
     bot_logger.debug('Insert all guild members')
