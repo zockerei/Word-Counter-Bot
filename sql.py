@@ -17,6 +17,32 @@ class SqlStatements:
         _sql_logger.error(f'Connection to database failed: {error}')
 
     @staticmethod
+    def test_setup():
+        """dropping tables"""
+        # drop table
+        SqlStatements._cursor.execute('drop table user')
+        SqlStatements._cursor.execute('drop table user_has_word')
+        SqlStatements._cursor.execute('drop table word')
+
+        # create table
+        SqlStatements.create_table()
+
+        # inserts
+        SqlStatements._cursor.execute('insert into user values (372045873095639040);')
+        SqlStatements._cursor.execute('insert into word values ("test");')
+        SqlStatements._cursor.execute(
+            """insert into user_has_word values (
+            372045873095639040,
+            "test",
+            50);"""
+        )
+
+        # select test
+        print(SqlStatements._cursor.execute('select * from user').fetchall())
+        print(SqlStatements._cursor.execute('select * from word').fetchall())
+        print(SqlStatements._cursor.execute('select * from user_has_word').fetchall())
+
+    @staticmethod
     def create_table():
         """create table users for database"""
         SqlStatements._sql_logger.debug('In create table')
@@ -33,14 +59,16 @@ class SqlStatements:
             # word table
             SqlStatements._cursor.execute(
                 """create table if not exists word (
-                word text primary key,
-                foreign key (word) references user_has_word (word_name)
+                name text primary key,
+                foreign key (name) references user_has_word (word_name)
                 );"""
             )
             SqlStatements._sql_logger.debug('Creating table user_has_word')
             # user_has_word table
             SqlStatements._cursor.execute(
                 """create table if not exists user_has_word (
+                user_id integer,
+                word_name varchar(45),
                 count integer
                 );"""
             )
@@ -55,13 +83,17 @@ class SqlStatements:
         SqlStatements._sql_logger.info('All members in database')
 
     @staticmethod
-    def get_count(user_id):
+    def get_count(user_id, word):
         """get count of user_id"""
         SqlStatements._sql_logger.debug('Get count')
         with SqlStatements._sqlite_connection:
             count = SqlStatements._cursor.execute(
-                "select count from word_counter where user_id = :user_id",
-                {'user_id': user_id}
+                """select count from user_has_word
+                inner join user on user.id = user_has_word.user_id
+                inner join word on word.name = user_has_word.word_name
+                where user_id = :user_id
+                and word_name = :word;""",
+                {'user_id': user_id, 'word': word}
             ).fetchone()[0]
             SqlStatements._sql_logger.info(f'User count is: {count}')
         return count
@@ -109,7 +141,7 @@ class SqlStatements:
             return False
 
     @staticmethod
-    def update_user_count(user_id, count):
+    def update_user_count(user_id, word, count):
         """Update user count"""
         SqlStatements._sql_logger.info('Updating count')
         with SqlStatements._sqlite_connection:
@@ -117,8 +149,19 @@ class SqlStatements:
             current_count = SqlStatements.get_count(user_id)
 
             SqlStatements._cursor.execute(
-                "update users set count = :count where user_id = :user_id",
-                {'count': current_count + count, 'user_id': user_id}
+                """update user set count = :count
+                where user_id = :user_id
+                and word_name = :word""",
+                {'count': current_count + count, 'user_id': user_id, 'word': word}
             )
             SqlStatements._sql_logger.info(f'Updated count of user: {current_count + count}')
         SqlStatements._sql_logger.debug('Exiting insert_update_user_count')
+
+
+if __name__ == '__main__':
+    """testing for sql statements (will be replaced with unit testing (probably))"""
+    # test setup
+    SqlStatements.test_setup()
+
+    # get count test
+    print(SqlStatements.get_count(372045873095639040, 'test'))
