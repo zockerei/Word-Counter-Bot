@@ -38,15 +38,13 @@ client = discord.Client(intents=intents)
 with open(config_path) as config_file:
     bot_config = yaml.safe_load(config_file.read())
     token = bot_config['token']
-    word = bot_config['word']
+    words = bot_config['word']
     server_id = bot_config['server_id']
 bot_logger.info('bot_config loaded')
 
 
-def get_convert_id(message):
+def get_convert_id(mention):
     """get user id from message"""
-    bot_logger.debug('Split message mention')
-    mention = message.split(' ')[1]
 
     bot_logger.debug('Convert message')
     mention = mention.replace('<', '')
@@ -60,7 +58,10 @@ def get_convert_id(message):
 async def on_ready():
     """Login and database setup"""
     bot_logger.info(f'Logged in as {client.user}')
+
+    # create sql table and add words
     sql_statements.create_table()
+    sql_statements.add_words(words)
 
     # get server member ids and add them all to the database
     bot_logger.debug('Insert all guild members')
@@ -82,11 +83,14 @@ async def on_message(message):
     message_content = message.content.lower()
 
     if message_content.startswith('/c' or '/count'):
-        """get count of user"""
+        """get count of user with word"""
 
-        bot_logger.info('Get count of user')
-        converted_user_id = get_convert_id(message_content)
-        count_user_id = sql_statements.get_count(converted_user_id)
+        bot_logger.info('Get count of user with word')
+        message_split = message_content.split(' ')
+        word = message_split[1]
+
+        converted_user_id = get_convert_id(message_split[2])
+        count_user_id = sql_statements.get_count(converted_user_id, word)
         username = await client.fetch_user(converted_user_id)
 
         # send message with count
@@ -124,14 +128,14 @@ async def on_message(message):
         return
 
     # check if message has word
-    if word not in message_content:
-        bot_logger.info('Word not found in message')
-        return
-
-    # add word count to database
-    bot_logger.info('Word found in message')
-    word_count = message_content.count(word)
-    user_id = message.author.id
-    sql_statements.update_user_count(user_id, word_count)
+    for word in words:
+        if word not in message_content:
+            bot_logger.info(f'Word: {word} not found in message')
+        else:
+            # add words count to database
+            bot_logger.info(f'Word: {word} found in message')
+            word_count = message_content.count(word)
+            user_id = message.author.id
+            sql_statements.update_user_count(user_id, word, word_count)
 
 client.run(token, log_handler=None)
