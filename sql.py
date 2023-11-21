@@ -20,9 +20,7 @@ class SqlStatements:
     def test():
         """dropping tables"""
         # drop table
-        SqlStatements._cursor.execute('drop table user')
-        SqlStatements._cursor.execute('drop table user_has_word')
-        SqlStatements._cursor.execute('drop table word')
+        SqlStatements.drop_tables()
 
         # create table
         SqlStatements.create_table()
@@ -41,6 +39,15 @@ class SqlStatements:
         print(SqlStatements._cursor.execute('select * from user').fetchall())
         print(SqlStatements._cursor.execute('select * from word').fetchall())
         print(SqlStatements._cursor.execute('select * from user_has_word').fetchall())
+
+    @staticmethod
+    def drop_tables():
+        """drop all tables"""
+        SqlStatements._sql_logger.debug('Dropping all tables')
+        SqlStatements._cursor.execute('drop table user')
+        SqlStatements._cursor.execute('drop table user_has_word')
+        SqlStatements._cursor.execute('drop table word')
+        SqlStatements._sql_logger.info('Dropped all tables')
 
     @staticmethod
     def create_table():
@@ -76,14 +83,19 @@ class SqlStatements:
     @staticmethod
     def add_words(words):
         """add all words to database"""
+        database_words = SqlStatements.get_words()
+
         SqlStatements._sql_logger.debug('Inserting all words to database')
         for word in words:
-            # add check for unique
-            SqlStatements._cursor.execute(
-                "insert into word values (:word)",
-                {'word': word}
-            )
-            SqlStatements._sql_logger.debug(f'added word {word} into database')
+            if word not in database_words:
+                # add check for unique
+                SqlStatements._cursor.execute(
+                    "insert into word values (:word)",
+                    {'word': word}
+                )
+                SqlStatements._sql_logger.debug(f'Added word {word} into database')
+            else:
+                SqlStatements._sql_logger.debug(f'Word: {word} already in database')
 
         SqlStatements._sql_logger.info('All words in database')
 
@@ -99,7 +111,7 @@ class SqlStatements:
     @staticmethod
     def get_count(user_id, word):
         """get count of user_id"""
-        SqlStatements._sql_logger.debug('Get count')
+        SqlStatements._sql_logger.debug(f'Get count from user: {user_id} with word: {word}')
         with SqlStatements._sqlite_connection:
             count = SqlStatements._cursor.execute(
                 """select count from user_has_word
@@ -111,6 +123,19 @@ class SqlStatements:
             ).fetchone()[0]
             SqlStatements._sql_logger.info(f'User count is: {count}')
         return count
+
+    @staticmethod
+    def get_words():
+        """get all words from database"""
+        SqlStatements._sql_logger.debug('Get all words from database')
+        with SqlStatements._sqlite_connection:
+            words_database = [
+                word[0] for word in SqlStatements._cursor.execute(
+                    """select name from word"""
+                ).fetchall()
+            ]
+            SqlStatements._sql_logger.info(f'Words from database: {words_database}')
+        return words_database
 
     @staticmethod
     def get_highest_count_tuple():
@@ -136,10 +161,10 @@ class SqlStatements:
 
     @staticmethod
     def check_user(user_id):
-        # check if user is in database
+        """check if user is in database"""
         with SqlStatements._sqlite_connection:
             # get user_id
-            SqlStatements._sql_logger.debug('Select user_id')
+            SqlStatements._sql_logger.debug(f'Select user_id {user_id}')
             SqlStatements._cursor.execute(
                 "select id from user where id = :user_id",
                 {'user_id': user_id}
@@ -160,16 +185,55 @@ class SqlStatements:
         SqlStatements._sql_logger.info('Updating count')
         with SqlStatements._sqlite_connection:
             # sum count
-            current_count = SqlStatements.get_count(user_id)
+            if SqlStatements.check_user_has_word(user_id, word):
+                current_count = SqlStatements.get_count(user_id, word)
+                SqlStatements._cursor.execute(
+                    """update user_has_word set count = :count
+                    where user_id = :user_id
+                    and word_name = :word;""",
+                    {'count': current_count + count, 'user_id': user_id, 'word': word}
+                )
+                SqlStatements._sql_logger.info(f'Updated count of user: {current_count + count}')
+            else:
+                SqlStatements.insert_user_has_word(user_id, word, count)
 
-            SqlStatements._cursor.execute(
-                """update user set count = :count
-                where user_id = :user_id
-                and word_name = :word""",
-                {'count': current_count + count, 'user_id': user_id, 'word': word}
-            )
-            SqlStatements._sql_logger.info(f'Updated count of user: {current_count + count}')
         SqlStatements._sql_logger.debug('Exiting insert_update_user_count')
+
+    @staticmethod
+    def check_user_has_word(user_id, word):
+        """check if user has association with word"""
+        SqlStatements._sql_logger.debug('Check if user has association with word')
+
+        with SqlStatements._sqlite_connection:
+            SqlStatements._sql_logger.debug(f'Select user {user_id} from user_has_word')
+            SqlStatements._cursor.execute(
+                """select * from user_has_word
+                where user_id = :user_id
+                and word_name = :word_name""",
+                {'user_id': user_id, 'word_name': word}
+            )
+            SqlStatements._sql_logger.debug(f'User with id: {user_id} selected')
+
+        if SqlStatements._cursor.fetchall():
+            # if user has association in database, return True
+            SqlStatements._sql_logger.debug(f'User: {user_id} has association with word: {word}')
+            return True
+        else:
+            SqlStatements._sql_logger.debug(f'User: {user_id} has no association with word: {word}')
+            return False
+
+    @staticmethod
+    def insert_user_has_word(user_id, word, count):
+        """insert new user-word"""
+        SqlStatements._sql_logger.debug(f'Insert new user_has_word user_id: {user_id} word: {word} count: {count}')
+        with SqlStatements._sqlite_connection:
+            SqlStatements._cursor.execute(
+                """insert into user_has_word values(
+                :user_id,
+                :word,
+                :count);""",
+                {'user_id': user_id, 'word': word, 'count': count}
+            )
 
 
 if __name__ == '__main__':

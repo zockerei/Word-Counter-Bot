@@ -43,10 +43,8 @@ with open(config_path) as config_file:
 bot_logger.info('bot_config loaded')
 
 
-def get_convert_id(message):
+def get_convert_id(mention):
     """get user id from message"""
-    bot_logger.debug('Split message mention')
-    mention = message.split(' ')[1]
 
     bot_logger.debug('Convert message')
     mention = mention.replace('<', '')
@@ -85,11 +83,14 @@ async def on_message(message):
     message_content = message.content.lower()
 
     if message_content.startswith('/c' or '/count'):
-        """get count of user"""
+        """get count of user with word"""
 
-        bot_logger.info('Get count of user')
-        converted_user_id = get_convert_id(message_content)
-        count_user_id = sql_statements.get_count(converted_user_id)
+        bot_logger.info('Get count of user with word')
+        message_split = message_content.split(' ')
+        word = message_split[1]
+
+        converted_user_id = get_convert_id(message_split[2])
+        count_user_id = sql_statements.get_count(converted_user_id, word)
         username = await client.fetch_user(converted_user_id)
 
         # send message with count
@@ -127,14 +128,14 @@ async def on_message(message):
         return
 
     # check if message has word
-    if word not in message_content:
-        bot_logger.info('Word not found in message')
-        return
-
-    # add word count to database
-    bot_logger.info('Word found in message')
-    word_count = message_content.count(word)
-    user_id = message.author.id
-    sql_statements.update_user_count(user_id, word_count)
+    for word in words:
+        if word not in message_content:
+            bot_logger.info(f'Word: {word} not found in message')
+        else:
+            # add words count to database
+            bot_logger.info(f'Word: {word} found in message')
+            word_count = message_content.count(word)
+            user_id = message.author.id
+            sql_statements.update_user_count(user_id, word, word_count)
 
 client.run(token, log_handler=None)
