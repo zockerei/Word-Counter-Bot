@@ -138,15 +138,20 @@ class SqlStatements:
         return words_database
 
     @staticmethod
-    def get_highest_count_tuple():
+    def get_highest_count_column(word):
         """get user with the highest count"""
-        SqlStatements._sql_logger.debug('Get user with highest count')
+        SqlStatements._sql_logger.debug(f'Get user with highest count from word {word}')
         with SqlStatements._sqlite_connection:
-            highest_count_tuple = SqlStatements._cursor.execute(
-                "select * from users where count = (select max(count) from users)"
+            highest_count_column = SqlStatements._cursor.execute(
+                """select * from user_has_word
+                where count = (
+                    select max(count) from user_has_word
+                    where word_name = :word
+                    )""",
+                {'word': word}
             ).fetchone()
-        SqlStatements._sql_logger.debug(f'Got highest count: {highest_count_tuple}')
-        return highest_count_tuple
+        SqlStatements._sql_logger.debug(f'Got highest count: {highest_count_column}')
+        return highest_count_column
 
     @staticmethod
     def insert_new_user(user_id):
