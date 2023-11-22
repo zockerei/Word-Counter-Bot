@@ -8,14 +8,12 @@ class EmbedBuilder:
             thumbnail_url,
             color=discord.Color.dark_embed(),
             title=None
-
     ):
         EmbedBuilder._embed_logger.debug('Creating default embed')
         self._embed = discord.Embed(
             color=color,
-            title=title
+            title=title,
         )
-        self._embed.set_footer(text='placeholder for highest count')
         self._embed.set_thumbnail(url=thumbnail_url)
 
     # logging setup
@@ -26,6 +24,11 @@ class EmbedBuilder:
         """add description to embed"""
         EmbedBuilder._embed_logger.debug('Adding description to embed')
         self._embed.description = f'{description}\n'
+
+    def add_footer(self, footer):
+        """add footer to embed"""
+        EmbedBuilder._embed_logger.debug('Adding footer to embed')
+        self._embed.set_footer(text=f'{footer}')
 
     def to_dict(self):
         EmbedBuilder._embed_logger.debug('Convert embed to dictionary')

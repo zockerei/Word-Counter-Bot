@@ -43,7 +43,7 @@ with open(config_path) as config_file:
 bot_logger.info('bot_config loaded')
 
 
-def get_convert_id(mention):
+def convert_id(mention):
     """get user id from message"""
 
     bot_logger.debug('Convert message')
@@ -84,12 +84,11 @@ async def on_message(message):
 
     if message_content.startswith('/c' or '/count'):
         """get count of user with word"""
-
         bot_logger.info('Get count of user with word')
         message_split = message_content.split(' ')
         word = message_split[1]
 
-        converted_user_id = get_convert_id(message_split[2])
+        converted_user_id = convert_id(message_split[2])
         count_user_id = sql_statements.get_count(converted_user_id, word)
         username = await client.fetch_user(converted_user_id)
 
@@ -100,6 +99,14 @@ async def on_message(message):
             title=f'Count from {username}'
         )
         count_embed.add_description(f'{username} has said {word} {count_user_id} times')
+
+        # set footer
+        highest_count_tuple = sql_statements.get_highest_count_column(word)
+        username = await client.fetch_user(highest_count_tuple[0])
+        count_embed.add_footer(
+            f'The person who has said {word} the most is '
+            f'{username} with {highest_count_tuple[2]} times'
+        )
         await message.channel.send(embed=count_embed)
         bot_logger.debug('Count message sent')
 
