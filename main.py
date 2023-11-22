@@ -106,11 +106,11 @@ async def on_message(message):
         return
 
     if message_content.startswith('/hc' or '/highestCount'):
-        """get the highest count from all users"""
-
+        """get the highest count from all users from word"""
         # get the highest count
-        bot_logger.debug('Get highest count of user')
-        highest_count_tuple = sql_statements.get_highest_count_tuple()
+        bot_logger.debug('Get highest count of user from word')
+        word = message_content.split(' ')[1]
+        highest_count_tuple = sql_statements.get_highest_count_column(word)
 
         # make embed
         highest_count_embed = embed.EmbedBuilder(
@@ -120,11 +120,10 @@ async def on_message(message):
         username = await client.fetch_user(highest_count_tuple[0])
         highest_count_embed.add_description(
             f"""The user who has said {word} the most is ||{username}||\n
-            With an impressive amount of {highest_count_tuple[1]} times"""
+            With an impressive amount of {highest_count_tuple[2]} times"""
         )
         await message.channel.send(embed=highest_count_embed)
         bot_logger.debug('Highest count message sent')
-
         return
 
     # check if message has word
