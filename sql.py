@@ -112,16 +112,20 @@ class SqlStatements:
     def get_count(user_id, word):
         """get count of user_id"""
         SqlStatements._sql_logger.debug(f'Get count from user: {user_id} with word: {word}')
-        with SqlStatements._sqlite_connection:
-            count = SqlStatements._cursor.execute(
-                """select count from user_has_word
-                inner join user on user.id = user_has_word.user_id
-                inner join word on word.name = user_has_word.word_name
-                where user_id = :user_id
-                and word_name = :word;""",
-                {'user_id': user_id, 'word': word}
-            ).fetchone()[0]
-            SqlStatements._sql_logger.info(f'User count is: {count}')
+        try:
+            with SqlStatements._sqlite_connection:
+                count = SqlStatements._cursor.execute(
+                    """select count from user_has_word
+                    inner join user on user.id = user_has_word.user_id
+                    inner join word on word.name = user_has_word.word_name
+                    where user_id = :user_id
+                    and word_name = :word;""",
+                    {'user_id': user_id, 'word': word}
+                ).fetchone()[0]
+        except TypeError as error:
+            SqlStatements._sql_logger.error(error)
+            return -1
+        SqlStatements._sql_logger.info(f'User count is: {count}')
         return count
 
     @staticmethod
@@ -141,15 +145,19 @@ class SqlStatements:
     def get_highest_count_column(word):
         """get user with the highest count"""
         SqlStatements._sql_logger.debug(f'Get user with highest count from word {word}')
-        with SqlStatements._sqlite_connection:
-            highest_count_column = SqlStatements._cursor.execute(
-                """select * from user_has_word
-                where count = (
-                    select max(count) from user_has_word
-                    where word_name = :word
-                    )""",
-                {'word': word}
-            ).fetchone()
+        try:
+            with SqlStatements._sqlite_connection:
+                highest_count_column = SqlStatements._cursor.execute(
+                    """select * from user_has_word
+                    where count = (
+                        select max(count) from user_has_word
+                        where word_name = :word
+                        )""",
+                    {'word': word}
+                ).fetchone()
+        except TypeError as error:
+            SqlStatements._sql_logger.error(error)
+            return -1
         SqlStatements._sql_logger.debug(f'Got highest count: {highest_count_column}')
         return highest_count_column
 
