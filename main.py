@@ -85,12 +85,28 @@ async def on_message(message):
     if message_content.startswith('/c' or '/count'):
         """get count of user with word"""
         bot_logger.info('Get count of user with word')
+
+        # split message
         message_split = message_content.split(' ')
         word = message_split[1]
-
         converted_user_id = convert_id(message_split[2])
+
+        # convert and get username
         count_user_id = sql_statements.get_count(converted_user_id, word)
         username = await client.fetch_user(converted_user_id)
+
+        if count_user_id == -1:
+            # create embed for 0 count user
+            bot_logger.debug(f'Creating embed for zero count for username: {username}')
+            zero_count_embed = embed.EmbedBuilder(
+                client.user.avatar,
+                title=f'{username} is clean'
+            )
+            zero_count_embed.add_description(
+                f'{username} has said {word} 0 times\n (Or he tricked the system)'
+            )
+            await message.channel.send(embed=zero_count_embed)
+            return
 
         # send message with count
         bot_logger.debug('Creating count embed')
@@ -119,10 +135,24 @@ async def on_message(message):
         word = message_content.split(' ')[1]
         highest_count_tuple = sql_statements.get_highest_count_column(word)
 
+        if highest_count_tuple is None:
+            # make embed when no user has said the word
+            bot_logger.debug(f'Creating embed. No User has said the word: {word}')
+            no_count_embed = embed.EmbedBuilder(
+                client.user.avatar,
+                title=f'Dead Server'
+            )
+            no_count_embed.add_description(
+                f"""No User in this Server has said {word}\n
+                This is very sospechoso... :eyes:"""
+            )
+            await message.channel.send(embed=no_count_embed)
+            return
+
         # make embed
         highest_count_embed = embed.EmbedBuilder(
             client.user.avatar,
-            title=f'Highest count from user'
+            title=f'Highest count from all Users'
         )
         username = await client.fetch_user(highest_count_tuple[0])
         highest_count_embed.add_description(
