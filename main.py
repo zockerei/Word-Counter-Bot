@@ -163,15 +163,33 @@ async def on_message(message):
         bot_logger.debug('Highest count message sent')
         return
 
-    # check if message has word
+    # check if message has any word
     for word in words:
-        if word not in message_content:
-            bot_logger.info(f'Word: {word} not found in message')
-        else:
+        if word in message_content:
             # add words count to database
             bot_logger.info(f'Word: {word} found in message')
             word_count = message_content.count(word)
             user_id = message.author.id
-            sql_statements.update_user_count(user_id, word, word_count)
+
+            # see if it is the first time the User has said the word
+            if sql_statements.get_count(word, user_id) == -1:
+                bot_logger.debug(f'First time {user_id} has said {word}')
+                sql_statements.update_user_count(user_id, word, word_count)
+
+                # first time embed
+                username = await client.fetch_user(user_id)
+                first_time_embed = embed.EmbedBuilder(
+                    client.user.avatar,
+                    title=f'First time :smirk:'
+                )
+                first_time_embed.add_description(
+                    f"""{username} was a naughty boy and said {word}\n
+                    His first time... :sweat_drops:"""
+                )
+                await message.channel.send(embed=first_time_embed)
+                bot_logger.debug('First time message sent')
+        else:
+            bot_logger.info(f'Word: {word} not found in message')
+
 
 client.run(token, log_handler=None)
