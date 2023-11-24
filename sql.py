@@ -164,6 +164,9 @@ class SqlStatements:
     @staticmethod
     def insert_new_user(user_id):
         """insert new user into database"""
+        if SqlStatements.check_user(user_id):
+            return
+
         with SqlStatements._sqlite_connection:
             SqlStatements._sql_logger.debug(f'Inserting new user {user_id}')
             SqlStatements._cursor.execute(

@@ -40,6 +40,7 @@ with open(config_path) as config_file:
     token = bot_config['token']
     words = bot_config['word']
     server_id = bot_config['server_id']
+    channel_id = bot_config['channel_id']
 bot_logger.info('bot_config loaded')
 
 
@@ -73,6 +74,29 @@ async def on_ready():
 
 
 @client.event
+async def on_member_join(member):
+    """create new User in database if member joins"""
+    bot_logger.debug(f'{member} joined')
+
+    # create new user in database
+    sql_statements.insert_new_user(member.id)
+
+    # create embed for new user
+    username = await client.fetch_user(member.id)
+    new_user_embed = embed.Embed(
+        client.user.avatar,
+        title=f'A new victim'
+    )
+    new_user_embed.add_description(
+        f"""A new victim joined the Server\n
+        Be aware of what you type {username}... :flushed:"""
+    )
+    channel = client.get_channel(channel_id)
+    await channel.send(embed=new_user_embed)
+    bot_logger.debug(f'New user message sent')
+
+
+@client.event
 async def on_message(message):
     """All events with messages (count, highest count, word counter)"""
     if message.author == client.user:
@@ -98,7 +122,7 @@ async def on_message(message):
         if count_user_id == -1:
             # create embed for 0 count user
             bot_logger.debug(f'Creating embed for zero count for username: {username}')
-            zero_count_embed = embed.EmbedBuilder(
+            zero_count_embed = embed.Embed(
                 client.user.avatar,
                 title=f'{username} is clean'
             )
@@ -110,7 +134,7 @@ async def on_message(message):
 
         # send message with count
         bot_logger.debug('Creating count embed')
-        count_embed = embed.EmbedBuilder(
+        count_embed = embed.Embed(
             client.user.avatar,
             title=f'Count from {username}'
         )
@@ -138,7 +162,7 @@ async def on_message(message):
         if highest_count_tuple is None:
             # make embed when no user has said the word
             bot_logger.debug(f'Creating embed. No User has said the word: {word}')
-            no_count_embed = embed.EmbedBuilder(
+            no_count_embed = embed.Embed(
                 client.user.avatar,
                 title=f'Dead Server'
             )
@@ -150,7 +174,7 @@ async def on_message(message):
             return
 
         # make embed
-        highest_count_embed = embed.EmbedBuilder(
+        highest_count_embed = embed.Embed(
             client.user.avatar,
             title=f'Highest count from all Users'
         )
