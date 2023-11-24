@@ -104,8 +104,9 @@ class SqlStatements:
         except TypeError as error:
             SqlStatements._sql_logger.error(error)
             return -1
-        SqlStatements._sql_logger.info(f'User count is: {count}')
-        return count
+        else:
+            SqlStatements._sql_logger.info(f'User count is: {count}')
+            return count
 
     @staticmethod
     def get_words():
@@ -229,3 +230,23 @@ class SqlStatements:
                 :count);""",
                 {'user_id': user_id, 'word': word, 'count': count}
             )
+
+    @staticmethod
+    def get_total_highest_count_column():
+        """Get the column with the highest count from user_has_word table"""
+        try:
+            with SqlStatements._sqlite_connection:
+                result = SqlStatements._cursor.execute(
+                    """SELECT * FROM user_has_word
+                    ORDER BY count DESC LIMIT 1;"""
+                ).fetchone()
+
+                if result:
+                    user_id, word_name, count = result
+                    return {'user_id': user_id, 'word_name': word_name, 'count': count}
+                else:
+                    SqlStatements._sql_logger.debug('No data found in user_has_word table.')
+                    return None
+        except sqlite3.Error as error:
+            SqlStatements._sql_logger.error(f'Error getting highest count column: {error}')
+            return None
