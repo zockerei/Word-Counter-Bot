@@ -168,7 +168,7 @@ async def on_message(message):
             )
             no_count_embed.add_description(
                 f"""No User in this Server has said {word}\n
-                This is very sospechoso... :eyes:"""
+                This is very sospechoso... :sus:"""
             )
             await message.channel.send(embed=no_count_embed)
             return
@@ -185,6 +185,15 @@ async def on_message(message):
         )
         await message.channel.send(embed=highest_count_embed)
         bot_logger.debug('Highest count message sent')
+        return
+
+    if message_content.startswith('/thc or /totalHighestCount'):
+        """get the user with highest amount of all words"""
+        bot_logger.debug('Get user with highest amount of all words')
+        word = message_content.split(' ')[1]
+
+        for word in words:
+            
         return
 
     # check if message has any word

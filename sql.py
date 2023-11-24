@@ -17,30 +17,6 @@ class SqlStatements:
         _sql_logger.error(f'Connection to database failed: {error}')
 
     @staticmethod
-    def test():
-        """dropping tables"""
-        # drop table
-        SqlStatements.drop_tables()
-
-        # create table
-        SqlStatements.create_table()
-
-        # inserts
-        SqlStatements._cursor.execute('insert into user values (372045873095639040);')
-        SqlStatements._cursor.execute('insert into word values ("test");')
-        SqlStatements._cursor.execute(
-            """insert into user_has_word values (
-            372045873095639040,
-            "test",
-            50);"""
-        )
-
-        # select test
-        print(SqlStatements._cursor.execute('select * from user').fetchall())
-        print(SqlStatements._cursor.execute('select * from word').fetchall())
-        print(SqlStatements._cursor.execute('select * from user_has_word').fetchall())
-
-    @staticmethod
     def drop_tables():
         """drop all tables"""
         SqlStatements._sql_logger.debug('Dropping all tables')
@@ -53,32 +29,35 @@ class SqlStatements:
     def create_table():
         """create table users for database"""
         SqlStatements._sql_logger.debug('In create table')
-        with SqlStatements._sqlite_connection:
-            # user table
-            SqlStatements._sql_logger.debug('Creating table user')
-            SqlStatements._cursor.execute(
-                """create table if not exists user (
-                id integer primary key,
-                foreign key (id) references user_has_word (user_id)
-                );"""
-            )
-            SqlStatements._sql_logger.debug('Creating table word')
-            # word table
-            SqlStatements._cursor.execute(
-                """create table if not exists word (
-                name text primary key,
-                foreign key (name) references user_has_word (word_name)
-                );"""
-            )
-            SqlStatements._sql_logger.debug('Creating table user_has_word')
-            # user_has_word table
-            SqlStatements._cursor.execute(
-                """create table if not exists user_has_word (
-                user_id integer,
-                word_name varchar(45),
-                count integer
-                );"""
-            )
+        try:
+            with SqlStatements._sqlite_connection:
+                # user table
+                SqlStatements._sql_logger.debug('Creating table user')
+                SqlStatements._cursor.execute(
+                    """create table if not exists user (
+                    id integer primary key,
+                    foreign key (id) references user_has_word (user_id)
+                    );"""
+                )
+                SqlStatements._sql_logger.debug('Creating table word')
+                # word table
+                SqlStatements._cursor.execute(
+                    """create table if not exists word (
+                    name text primary key,
+                    foreign key (name) references user_has_word (word_name)
+                    );"""
+                )
+                SqlStatements._sql_logger.debug('Creating table user_has_word')
+                # user_has_word table
+                SqlStatements._cursor.execute(
+                    """create table if not exists user_has_word (
+                    user_id integer,
+                    word_name varchar(45),
+                    count integer
+                    );"""
+                )
+        except sqlite3.Error as error:
+            SqlStatements._sql_logger.error(f'Error creating table: {error}')
 
     @staticmethod
     def add_words(words):
@@ -250,12 +229,3 @@ class SqlStatements:
                 :count);""",
                 {'user_id': user_id, 'word': word, 'count': count}
             )
-
-
-if __name__ == '__main__':
-    """testing for sql statements (will be replaced with unit testing (probably))"""
-    # test setup
-    SqlStatements.test()
-
-    # get count test
-    print(SqlStatements.get_count(372045873095639040, 'test'))
