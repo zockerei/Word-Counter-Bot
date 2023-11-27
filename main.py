@@ -61,7 +61,6 @@ async def on_ready():
     bot_logger.info(f'Logged in as {client.user}')
 
     # create sql table and add words
-    sql_statements.drop_tables()
     sql_statements.create_table()
     sql_statements.add_words(words)
 
@@ -215,8 +214,8 @@ async def on_message(message):
             title=f'Highest count of all words'
         )
         thc_embed.add_description(
-            f"""The winner for the Highest count of all words is....\n
-            ||{username}!|| who has said {total_highest_count[1]} {total_highest_count[2]} times"""
+            f"""The winner for the Highest count of all words is.... ||{username}!||\n
+            Who has said {total_highest_count[1]} {total_highest_count[2]} times"""
         )
         thc_embed.add_footer(
             f'Imagine'

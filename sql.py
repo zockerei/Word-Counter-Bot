@@ -236,14 +236,14 @@ class SqlStatements:
         """Get the column with the highest count from user_has_word table"""
         try:
             with SqlStatements._sqlite_connection:
-                result = SqlStatements._cursor.execute(
+                thc_column = SqlStatements._cursor.execute(
                     """SELECT * FROM user_has_word
                     ORDER BY count DESC LIMIT 1;"""
                 ).fetchone()
 
-                if result:
-                    user_id, word_name, count = result
-                    return {'user_id': user_id, 'word_name': word_name, 'count': count}
+                if thc_column:
+                    user_id, word_name, count = thc_column
+                    return thc_column
                 else:
                     SqlStatements._sql_logger.debug('No data found in user_has_word table.')
                     return None
