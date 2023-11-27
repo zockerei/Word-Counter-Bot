@@ -168,7 +168,7 @@ async def on_message(message):
             )
             no_count_embed.add_description(
                 f"""No User in this Server has said {word}\n
-                This is very sospechoso... :eyes:"""
+                This is very sospechoso... :sus:"""
             )
             await message.channel.send(embed=no_count_embed)
             return
@@ -187,6 +187,43 @@ async def on_message(message):
         bot_logger.debug('Highest count message sent')
         return
 
+    if message_content.startswith('/thc' or '/totalHighestCount'):
+        """get the user with highest amount of all words"""
+        bot_logger.debug('Get user with highest amount of all words')
+        total_highest_count = sql_statements.get_total_highest_count_column()
+
+        if total_highest_count is None:
+            # make embed when no user has said the word
+            bot_logger.debug(f'Creating embed. No User has said the any word')
+            no_count_embed = embed.Embed(
+                client.user.avatar,
+                title=f'Dead Server'
+            )
+            no_count_embed.add_description(
+                f"""No User in this Server has said any word...\n
+                This is very sospechoso... :sus:"""
+            )
+            await message.channel.send(embed=no_count_embed)
+            return
+
+        # make embed
+        bot_logger.debug('Making thc_embed')
+        username = await client.fetch_user(total_highest_count[0])
+        thc_embed = embed.Embed(
+            client.user.avatar,
+            title=f'Highest count of all words'
+        )
+        thc_embed.add_description(
+            f"""The winner for the Highest count of all words is.... ||{username}!||\n
+            Who has said {total_highest_count[1]} {total_highest_count[2]} times"""
+        )
+        thc_embed.add_footer(
+            f'Imagine'
+        )
+        await message.channel.send(embed=thc_embed)
+        bot_logger.info('Message for total highest count sent')
+        return
+
     # check if message has any word
     for word in words:
         if word in message_content:
@@ -196,13 +233,13 @@ async def on_message(message):
             user_id = message.author.id
 
             # see if it is the first time the User has said the word
-            if sql_statements.get_count(word, user_id) == -1:
+            if sql_statements.get_count(user_id, word) == -1:
                 bot_logger.debug(f'First time {user_id} has said {word}')
                 sql_statements.update_user_count(user_id, word, word_count)
 
                 # first time embed
                 username = await client.fetch_user(user_id)
-                first_time_embed = embed.EmbedBuilder(
+                first_time_embed = embed.Embed(
                     client.user.avatar,
                     title=f'First time :smirk:'
                 )
