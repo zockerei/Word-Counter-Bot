@@ -128,21 +128,21 @@ class TestSqlModule(unittest.TestCase):
         self._logger.debug('Testing get_count method')
 
         # Add a user and a word to the database
-        user_id = 123456789012345678
-        word = 'example_word'
-        self.sql_statements.add_user_ids(user_id)
-        self.sql_statements.add_words(word)
+        user_ids = [123456789012345678, 12345678912345678, 123456789123456789]
+        words = ['test1', 'test2', 'test3']
+        self.sql_statements.add_user_ids(*user_ids)
+        self.sql_statements.add_words(*words)
 
         # Add a count for the user and word
-        count_to_add = 5
-        self.sql_statements.insert_user_has_word(user_id, word, count_to_add)
+        counts_to_add = [5, 6, 7]
+        self.sql_statements.add_user_has_word(user_ids, words, counts_to_add)
 
         # Call get_count method
         self._logger.debug('Calling get_count method')
-        retrieved_count = self.sql_statements.get_count(user_id, word)
+        retrieved_count = self.sql_statements.get_count(user_ids, words)
 
         # Verify that the retrieved count is correct
-        self.assertEqual(retrieved_count, count_to_add, 'Retrieved count does not match expected count')
+        self.assertEqual(retrieved_count, counts_to_add, 'Retrieved count does not match expected count')
         self._logger.info('get_count method tested successfully')
 
 
