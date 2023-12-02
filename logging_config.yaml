@@ -42,7 +42,7 @@ loggers:
     handlers: [file, console]
     propagate: no
 
-  unittest:
+  bot.unittest:
     level: DEBUG
     handlers: [file, console]
     propagate: no
