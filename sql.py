@@ -93,29 +93,20 @@ class SqlStatements:
         SqlStatements._sql_logger.info('All members inserted into the database')
 
     @staticmethod
-    def add_user_has_word(user_ids, words, counts):
-        """Insert new user-words"""
-        if len(user_ids) != len(words) or len(user_ids) != len(counts):
-            SqlStatements._sql_logger.error('Input lists must have the same length')
-
-        data_to_insert = list(zip(user_ids, words, counts))
-
-        SqlStatements._sql_logger.debug(f'Inserting multiple user_has_word records: {data_to_insert}')
-
+    def add_user_has_word(user_id, word, count):
+        """Insert new user-word"""
+        SqlStatements._sql_logger.debug(f'Inserting user_has_word record: {user_id} | {word} | {count}')
         try:
             with SqlStatements._sqlite_connection:
-                SqlStatements.cursor.executemany(
+                SqlStatements.cursor.execute(
                     """insert into user_has_word values(
                     :user_id,
                     :word,
                     :count);""",
-                    [
-                        {'user_id': user_id, 'word': word, 'count': count}
-                        for user_id, word, count in data_to_insert
-                    ]
+                    {'user_id': user_id, 'word': word, 'count': count}
                 )
         except Exception as error:
-            SqlStatements._sql_logger.error(f'Error inserting multiple user_has_word records: {error}')
+            SqlStatements._sql_logger.error(f'Error inserting user_has_word record: {error}')
 
     @staticmethod
     def get_count(user_id, word):
