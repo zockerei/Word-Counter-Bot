@@ -170,8 +170,9 @@ class TestSqlModule(unittest.TestCase):
         words = ['word1', 'word2', 'word3']
         counts = [5, 6, 7]
 
-        # Call the method
-        self.sql_statements.add_user_has_word(user_ids, words, counts)
+        # Iterate over the input data and call the method
+        for user_id, word, count in zip(user_ids, words, counts):
+            self.sql_statements.add_user_has_word(user_id, word, count)
 
         # Verify the data is inserted correctly
         with sql.SqlStatements._sqlite_connection:
@@ -196,12 +197,13 @@ class TestSqlModule(unittest.TestCase):
         # Add a user and a word to the database
         user_ids = [123456789012345678, 12345678912345678, 123456789123456789]
         words = ['test1', 'test2', 'test3']
+        counts = [5, 6, 7]
         self.sql_statements.add_user_ids(*user_ids)
         self.sql_statements.add_words(*words)
 
-        # Add counts for users and words
-        counts_to_add = [5, 6, 7]
-        self.sql_statements.add_user_has_word(user_ids, words, counts_to_add)
+        # Iterate over the input data and call the method
+        for user_id, word, count in zip(user_ids, words, counts):
+            self.sql_statements.add_user_has_word(user_id, word, count)
 
         # Call get_count method
         self._logger.debug('Calling get_count method')
@@ -212,7 +214,7 @@ class TestSqlModule(unittest.TestCase):
         ]
 
         # Verify that the retrieved counts are correct
-        self.assertListEqual(retrieved_counts, counts_to_add, 'Retrieved counts do not match expected counts')
+        self.assertListEqual(retrieved_counts, counts, 'Retrieved counts do not match expected counts')
         self._logger.info('get_count method tested successfully')
 
     def testGetWords(self):
@@ -263,8 +265,9 @@ class TestSqlModule(unittest.TestCase):
         word = 'word1'
         counts = [5, 8, 3]
 
-        # Add user_has_word records for testing
-        self.sql_statements.add_user_has_word(user_ids, [word] * len(user_ids), counts)
+        # Iterate over the input data and call the method
+        for user_id, word, count in zip(user_ids, [word] * len(user_ids), counts):
+            self.sql_statements.add_user_has_word(user_id, word, count)
 
         # Call the method to get the highest count column for the specified word
         result = self.sql_statements.get_highest_count_column(word)
@@ -296,27 +299,25 @@ class TestSqlModule(unittest.TestCase):
         count = [5]
 
         # Insert user, word, and count
-        self.sql_statements.add_user_has_word(user_id, word, count)
+        self.sql_statements.add_user_has_word(user_id[0], word, count[0])
 
         # Call the update method
-        count[0] *= 2
-        self.sql_statements.update_user_count(user_id, word, count)
+        self.sql_statements.update_user_count(user_id[0], word, count[0])
 
         # Verify the data is updated correctly
         with sql.SqlStatements._sqlite_connection:
             result = sql.SqlStatements.cursor.execute(
                 """select count from user_has_word
-                where user_id = (:user_id)
-                and word_name = (:word)""",
+                where user_id = :user_id
+                and word_name = :word""",
                 {'user_id': user_id[0], 'word': word}
-            ).fetchone()
+            ).fetchone()[0]
 
         self.assertIsNotNone(result)
-        updated_count = result[0]
 
         # Check if the count is updated correctly
-        self.assertEqual(updated_count, count)
-        self._logger.debug(f'Updated count: {updated_count}')
+        self.assertEqual(result, 10)
+        self._logger.debug(f'Updated count: {result}')
 
 
 if __name__ == '__main__':
