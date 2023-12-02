@@ -61,7 +61,7 @@ async def on_ready():
     bot_logger.info(f'Logged in as {client.user}')
 
     # create sql table and add words
-    sql_statements.create_table()
+    sql_statements.create_tables()
     sql_statements.add_words(words)
 
     # get server member ids and add them all to the database
@@ -69,7 +69,7 @@ async def on_ready():
     guild_members = client.get_guild(server_id).members
     guild_member_ids = [member.id for member in guild_members]
     bot_logger.debug(f'Server member ids: {guild_member_ids}')
-    sql_statements.add_guild_members(guild_member_ids)
+    sql_statements.add_user_ids(*guild_member_ids)
     bot_logger.info('Bot ready')
 
 
@@ -79,7 +79,7 @@ async def on_member_join(member):
     bot_logger.debug(f'{member} joined')
 
     # create new user in database
-    sql_statements.insert_new_user(member.id)
+    sql_statements.add_user_ids(*member.id)
 
     # create embed for new user
     username = await client.fetch_user(member.id)
@@ -233,7 +233,7 @@ async def on_message(message):
             user_id = message.author.id
 
             # see if it is the first time the User has said the word
-            if sql_statements.get_count(user_id, word) == -1:
+            if sql_statements.get_count(user_id, word) is None:
                 bot_logger.debug(f'First time {user_id} has said {word}')
                 sql_statements.update_user_count(user_id, word, word_count)
 
