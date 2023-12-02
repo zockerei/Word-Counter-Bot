@@ -175,7 +175,7 @@ class SqlStatements:
             with SqlStatements._sqlite_connection:
                 highest_count_column = SqlStatements.cursor.execute(
                     """select * from user_has_word
-                    where count = (
+                        where count = (
                         select max(count) from user_has_word
                         where word_name = :word
                         )""",
@@ -183,7 +183,7 @@ class SqlStatements:
                 ).fetchone()
         except TypeError as error:
             SqlStatements._sql_logger.error(error)
-            return -1
+            return None
         SqlStatements._sql_logger.debug(f'Got highest count: {highest_count_column}')
         return highest_count_column
 
@@ -194,7 +194,7 @@ class SqlStatements:
         with SqlStatements._sqlite_connection:
             # sum count
             if SqlStatements.check_user_has_word(user_id, word):
-                current_count = SqlStatements.get_counts(user_id, word)
+                current_count = SqlStatements.get_count(user_id, word)
                 SqlStatements.cursor.execute(
                     """update user_has_word set count = :count
                     where user_id = :user_id
