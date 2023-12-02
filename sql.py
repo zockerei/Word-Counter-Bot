@@ -17,6 +17,18 @@ class SqlStatements:
         _sql_logger.error(f'Connection to database failed: {error}')
 
     @staticmethod
+    def _execute_query(query, success_message, error_message, params=None):
+        try:
+            with SqlStatements._sqlite_connection:
+                if params:
+                    SqlStatements.cursor.execute(query, params)
+                else:
+                    SqlStatements.cursor.executescript(query)
+            SqlStatements._sql_logger.info(success_message)
+        except sqlite3.Error as error:
+            SqlStatements._sql_logger.error(f'{error_message}: {error}')
+
+    @staticmethod
     def drop_tables():
         """drop all tables"""
         SqlStatements._sql_logger.debug('Dropping all tables')
@@ -27,37 +39,31 @@ class SqlStatements:
 
     @staticmethod
     def create_tables():
-        """create table users for database"""
-        SqlStatements._sql_logger.debug('In create tables')
-        try:
-            with SqlStatements._sqlite_connection:
-                # user table
-                SqlStatements._sql_logger.debug('Creating table user')
-                SqlStatements.cursor.execute(
-                    """create table if not exists user (
-                    id integer primary key
-                    );"""
-                )
-                SqlStatements._sql_logger.debug('Creating table word')
-                # word table
-                SqlStatements.cursor.execute(
-                    """create table if not exists word (
-                    name text primary key
-                    );"""
-                )
-                SqlStatements._sql_logger.debug('Creating table user_has_word')
-                # user_has_word table
-                SqlStatements.cursor.execute(
-                    """create table if not exists user_has_word (
-                    user_id integer,
-                    word_name varchar(45),
-                    count integer,
-                    foreign key (user_id) references user (id),
-                    foreign key (word_name) references word (name)
-                    );"""
-                )
-        except sqlite3.Error as error:
-            SqlStatements._sql_logger.error(f'Error creating table: {error}')
+        """create tables for database"""
+        script = """
+            -- create user table
+            create table if not exists user (
+                id integer primary key
+            );
+            
+            -- create word table
+            create table if not exists word (
+                name text primary key
+            );
+            
+            -- create user_has_word table
+            create table if not exists user_has_word (
+                user_id integer,
+                word_name varchar(45),
+                count integer,
+                foreign key (user_id) references user (id),
+                foreign key (word_name) references word (name)
+            );"""
+        SqlStatements._execute_query(
+            script,
+            'Tables created',
+            'Failed to create tables'
+        )
 
     @staticmethod
     def add_words(*words):
@@ -65,54 +71,48 @@ class SqlStatements:
         SqlStatements._sql_logger.debug('Inserting words into the database')
 
         for word in set(words):
-            try:
-                SqlStatements.cursor.execute(
-                    """insert or ignore into word values (:word)""",
-                    {'word': word}
-                )
-                SqlStatements._sql_logger.debug(f'Added word {word} into the database')
-            except sqlite3.IntegrityError:
-                SqlStatements._sql_logger.debug(f'Word: {word} already in the database')
-
-        SqlStatements._sql_logger.info('All words in the database')
+            query = "insert or ignore into word values (:word);"
+            SqlStatements._execute_query(
+                query,
+                f'Word: {word} successfully inserted',
+                f'Failed to insert word: {word}',
+                {'word': word}
+            )
 
     def add_user_ids(*user_ids):
         """Add all server members to the database"""
         SqlStatements._sql_logger.debug('Inserting all users to the database')
 
+        query = "insert or ignore into user values (:user_id)"
         for user_id in set(user_ids):
-            try:
-                SqlStatements.cursor.execute(
-                    "insert or ignore into user values (:user_id)",
-                    {'user_id': user_id}
-                )
-                SqlStatements._sql_logger.info(f'User {user_id} inserted into the database')
-            except sqlite3.Error as error:
-                SqlStatements._sql_logger.error(f'Error inserting user {user_id} to the database: {error}')
-
-        SqlStatements._sql_logger.info('All members inserted into the database')
+            SqlStatements._execute_query(
+                query,
+                f'User {user_id} inserted into the database',
+                f'Error inserting user {user_id} to the database',
+                {'user_id': user_id}
+            )
+        SqlStatements._sql_logger.debug('All members inserted into the database')
 
     @staticmethod
     def add_user_has_word(user_id, word, count):
-        """Insert new user-word"""
-        SqlStatements._sql_logger.debug(f'Inserting user_has_word record: {user_id} | {word} | {count}')
-        try:
-            with SqlStatements._sqlite_connection:
-                SqlStatements.cursor.execute(
-                    """insert into user_has_word values(
-                    :user_id,
-                    :word,
-                    :count);""",
-                    {'user_id': user_id, 'word': word, 'count': count}
-                )
-        except Exception as error:
-            SqlStatements._sql_logger.error(f'Error inserting user_has_word record: {error}')
+        """Insert new user_has_word"""
+        query = """
+            insert into user_has_word values (
+                :user_id,
+                :word,
+                :count
+            );"""
+        SqlStatements._execute_query(
+            query,
+            f'Inserted user_has_word record: {user_id} | {word} | {count}',
+            'Error inserting user_has_word record',
+            {'user_id': user_id, 'word': word, 'count': count}
+        )
 
     @staticmethod
     def get_count(user_id, word):
         """Get count for a specific user_id and word"""
         SqlStatements._sql_logger.debug(f'Get count for user: {user_id} with word: {word}')
-
         try:
             with SqlStatements._sqlite_connection:
                 count = SqlStatements.cursor.execute(
@@ -132,13 +132,20 @@ class SqlStatements:
     def get_words():
         """get all words from database"""
         SqlStatements._sql_logger.debug('Get all words from database')
+
+        query = """select name from word"""
+        success_message = 'Words retrieved successfully from the database'
+        error_message = 'Error retrieving words from the database'
+
         with SqlStatements._sqlite_connection:
-            words_database = [
-                word[0] for word in SqlStatements.cursor.execute(
-                    """select name from word"""
-                ).fetchall()
-            ]
-            SqlStatements._sql_logger.info(f'Words from database: {words_database}')
+            words_database = SqlStatements._execute_query(
+                query,
+                success_message,
+                error_message,
+                fetch_result='all'
+            )
+
+        SqlStatements._sql_logger.info(f'Words from database: {words_database}')
         return words_database
 
     @staticmethod
