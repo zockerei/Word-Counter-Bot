@@ -116,7 +116,7 @@ async def on_message(message):
         converted_user_id = convert_id(message_split[2])
 
         # convert and get username
-        count_user_id = sql_statements.get_counts(converted_user_id, word)
+        count_user_id = sql_statements.get_count(converted_user_id, word)
         username = await client.fetch_user(converted_user_id)
 
         if count_user_id == -1:
@@ -233,7 +233,7 @@ async def on_message(message):
             user_id = message.author.id
 
             # see if it is the first time the User has said the word
-            if sql_statements.get_counts(user_id, word) is None:
+            if sql_statements.get_count(user_id, word) is None:
                 bot_logger.debug(f'First time {user_id} has said {word}')
                 sql_statements.update_user_count(user_id, word, word_count)
 
