@@ -93,37 +93,48 @@ class SqlStatements:
         SqlStatements._sql_logger.info('All members inserted into the database')
 
     @staticmethod
-    def add_user_has_word(user_id, word, count):
-        """insert new user-word"""
-        SqlStatements._sql_logger.debug(f'Insert new user_has_word user_id: {user_id} word: {word} count: {count}')
-        with SqlStatements._sqlite_connection:
-            SqlStatements.cursor.execute(
-                """insert into user_has_word values(
-                :user_id,
-                :word,
-                :count);""",
-                {'user_id': user_id, 'word': word, 'count': count}
-            )
+    def add_user_has_word(user_ids, words, counts):
+        """Insert new user-words"""
+        if len(user_ids) != len(words) or len(user_ids) != len(counts):
+            SqlStatements._sql_logger.error('Input lists must have the same length')
+
+        data_to_insert = list(zip(user_ids, words, counts))
+
+        SqlStatements._sql_logger.debug(f'Inserting multiple user_has_word records: {data_to_insert}')
+
+        try:
+            with SqlStatements._sqlite_connection:
+                SqlStatements.cursor.executemany(
+                    """insert into user_has_word values(
+                    :user_id,
+                    :word,
+                    :count);""",
+                    [
+                        {'user_id': user_id, 'word': word, 'count': count}
+                        for user_id, word, count in data_to_insert
+                    ]
+                )
+        except Exception as error:
+            SqlStatements._sql_logger.error(f'Error inserting multiple user_has_word records: {error}')
 
     @staticmethod
     def get_count(user_id, word):
-        """get count of user_id"""
-        SqlStatements._sql_logger.debug(f'Get count from user: {user_id} with word: {word}')
+        """Get count for a specific user_id and word"""
+        SqlStatements._sql_logger.debug(f'Get count for user: {user_id} with word: {word}')
+
         try:
             with SqlStatements._sqlite_connection:
                 count = SqlStatements.cursor.execute(
                     """select count from user_has_word
-                    inner join user on user.id = user_has_word.user_id
-                    inner join word on word.name = user_has_word.word_name
-                    where user_id = :user_id
-                    and word_name = :word;""",
+                    where user_id in (:user_id)
+                    and word_name in (:word);""",
                     {'user_id': user_id, 'word': word}
                 ).fetchone()[0]
-        except TypeError as error:
-            SqlStatements._sql_logger.error(error)
-            return -1
+        except Exception as error:
+            SqlStatements._sql_logger.error(f'Error executing sql query: {error}')
+            return None
         else:
-            SqlStatements._sql_logger.info(f'User count is: {count}')
+            SqlStatements._sql_logger.info(f'Retrieved count: {count}')
             return count
 
     @staticmethod
@@ -183,7 +194,7 @@ class SqlStatements:
         with SqlStatements._sqlite_connection:
             # sum count
             if SqlStatements.check_user_has_word(user_id, word):
-                current_count = SqlStatements.get_count(user_id, word)
+                current_count = SqlStatements.get_counts(user_id, word)
                 SqlStatements.cursor.execute(
                     """update user_has_word set count = :count
                     where user_id = :user_id
