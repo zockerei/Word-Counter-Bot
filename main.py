@@ -69,7 +69,7 @@ async def on_ready():
     guild_members = client.get_guild(server_id).members
     guild_member_ids = [member.id for member in guild_members]
     bot_logger.debug(f'Server member ids: {guild_member_ids}')
-    sql_statements.add_user_ids(guild_member_ids)
+    sql_statements.add_user_ids(*guild_member_ids)
     bot_logger.info('Bot ready')
 
 
@@ -79,7 +79,7 @@ async def on_member_join(member):
     bot_logger.debug(f'{member} joined')
 
     # create new user in database
-    sql_statements.insert_new_user(member.id)
+    sql_statements.add_user_ids(*member.id)
 
     # create embed for new user
     username = await client.fetch_user(member.id)

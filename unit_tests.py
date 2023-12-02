@@ -24,6 +24,10 @@ class TestSqlModule(unittest.TestCase):
         # Create tables
         self.sql_statements.create_tables()
 
+    def tearDown(self):
+        # Drop tables afterwards
+        self.sql_statements.drop_tables()
+
     def testCreateTables(self):
         self._logger.debug("Testing creation of 'user' table")
         self.sql_statements.create_tables()
@@ -89,7 +93,7 @@ class TestSqlModule(unittest.TestCase):
         words_to_add = ['word1', 'word2', 'word3']
 
         self._logger.debug('Calling add_words method')
-        self.sql_statements.add_words(words_to_add)
+        self.sql_statements.add_words(*words_to_add)
 
         # Verify that the words are added to the database
         self._logger.debug('Verifying words added to database')
@@ -112,7 +116,7 @@ class TestSqlModule(unittest.TestCase):
 
         # Call add_guild_members method
         self._logger.debug('Calling add_guild_members method')
-        self.sql_statements.add_user_ids(guild_members)
+        self.sql_statements.add_user_ids(*guild_members)
 
         # Verify that the users were added to the database
         added_users = self.sql_statements.get_all_users()
@@ -144,6 +148,3 @@ class TestSqlModule(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
-
-    # Drop tables afterwards
-    sql.SqlStatements.drop_tables()
