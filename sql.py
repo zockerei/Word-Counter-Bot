@@ -209,26 +209,25 @@ class SqlStatements:
 
     @staticmethod
     def check_user_has_word(user_id, word):
-        """check if user has association with word"""
+        """Check if user has association with word"""
         SqlStatements._sql_logger.debug('Check if user has association with word')
 
         with SqlStatements._sqlite_connection:
-            SqlStatements._sql_logger.debug(f'Select user {user_id} from user_has_word')
-            SqlStatements.cursor.execute(
-                """select * from user_has_word
-                where user_id = :user_id
-                and word_name = :word_name""",
+            exists = SqlStatements.cursor.execute(
+                """select exists (
+                    select 1 from user_has_word
+                    where user_id = :user_id
+                    and word_name = :word_name
+                )""",
                 {'user_id': user_id, 'word_name': word}
-            )
-            SqlStatements._sql_logger.debug(f'User with id: {user_id} selected')
+            ).fetchone()[0]
 
-        if SqlStatements.cursor.fetchall():
-            # if user has association in database, return True
-            SqlStatements._sql_logger.debug(f'User: {user_id} has association with word: {word}')
-            return True
-        else:
-            SqlStatements._sql_logger.debug(f'User: {user_id} has no association with word: {word}')
-            return False
+        SqlStatements._sql_logger.debug(
+            f'User: {user_id} has association with word: {word}'
+            if exists
+            else f'User: {user_id} has no association with word: {word}'
+        )
+        return exists
 
     @staticmethod
     def get_total_highest_count_column():
@@ -236,16 +235,13 @@ class SqlStatements:
         try:
             with SqlStatements._sqlite_connection:
                 thc_column = SqlStatements.cursor.execute(
-                    """SELECT * FROM user_has_word
-                    ORDER BY count DESC LIMIT 1;"""
+                    """select * from user_has_word
+                    order by count desc limit 1;"""
                 ).fetchone()
 
-                if thc_column:
-                    user_id, word_name, count = thc_column
-                    return thc_column
-                else:
-                    SqlStatements._sql_logger.debug('No data found in user_has_word table.')
-                    return None
+                return thc_column
         except sqlite3.Error as error:
             SqlStatements._sql_logger.error(f'Error getting highest count column: {error}')
-            return None
+
+        SqlStatements._sql_logger.debug('No data found in user_has_word table.')
+        return None
