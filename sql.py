@@ -60,32 +60,37 @@ class SqlStatements:
             SqlStatements._sql_logger.error(f'Error creating table: {error}')
 
     @staticmethod
-    def add_words(words):
-        """add all words to database"""
-        database_words = SqlStatements.get_words()
+    def add_words(*words):
+        """Add words to the database if they don't exist"""
+        SqlStatements._sql_logger.debug('Inserting words into the database')
 
-        SqlStatements._sql_logger.debug('Inserting all words to database')
-        for word in words:
-            if word not in database_words:
-                # add check for unique
+        for word in set(words):
+            try:
                 SqlStatements.cursor.execute(
-                    "insert into word values (:word)",
+                    """insert or ignore into word values (:word)""",
                     {'word': word}
                 )
-                SqlStatements._sql_logger.debug(f'Added word {word} into database')
-            else:
-                SqlStatements._sql_logger.debug(f'Word: {word} already in database')
+                SqlStatements._sql_logger.debug(f'Added word {word} into the database')
+            except sqlite3.IntegrityError:
+                SqlStatements._sql_logger.debug(f'Word: {word} already in the database')
 
-        SqlStatements._sql_logger.info('All words in database')
+        SqlStatements._sql_logger.info('All words in the database')
 
-    @staticmethod
-    def add_user_ids(user_ids):
-        """add all server members to database"""
-        SqlStatements._sql_logger.debug('Inserting all users to database')
-        for user_id in user_ids:
-            if not SqlStatements.check_user(user_id):
-                SqlStatements.insert_new_user(user_id)
-        SqlStatements._sql_logger.info('All members in database')
+    def add_user_ids(*user_ids):
+        """Add all server members to the database"""
+        SqlStatements._sql_logger.debug('Inserting all users to the database')
+
+        for user_id in set(user_ids):
+            try:
+                SqlStatements.cursor.execute(
+                    "insert or ignore into user values (:user_id)",
+                    {'user_id': user_id}
+                )
+                SqlStatements._sql_logger.info(f'User {user_id} inserted into the database')
+            except sqlite3.Error as error:
+                SqlStatements._sql_logger.error(f'Error inserting user {user_id} to the database: {error}')
+
+        SqlStatements._sql_logger.info('All members inserted into the database')
 
     @staticmethod
     def get_count(user_id, word):
@@ -157,40 +162,6 @@ class SqlStatements:
             return -1
         SqlStatements._sql_logger.debug(f'Got highest count: {highest_count_column}')
         return highest_count_column
-
-    @staticmethod
-    def insert_new_user(user_id):
-        """insert new user into database"""
-        if SqlStatements.check_user(user_id):
-            return
-
-        with SqlStatements._sqlite_connection:
-            SqlStatements._sql_logger.debug(f'Inserting new user {user_id}')
-            SqlStatements.cursor.execute(
-                "insert into user values (:user_id)",
-                {'user_id': user_id}
-            )
-            SqlStatements._sql_logger.info(f'User {user_id} inserted to database')
-
-    @staticmethod
-    def check_user(user_id):
-        """check if user is in database"""
-        with SqlStatements._sqlite_connection:
-            # get user_id
-            SqlStatements._sql_logger.debug(f'Select user_id {user_id}')
-            SqlStatements.cursor.execute(
-                "select id from user where id = :user_id",
-                {'user_id': user_id}
-            )
-            SqlStatements._sql_logger.debug(f'User_id {user_id} selected')
-
-        if SqlStatements.cursor.fetchall():
-            # if user is already in database, return True
-            SqlStatements._sql_logger.debug(f'User {user_id} is in database')
-            return True
-        else:
-            SqlStatements._sql_logger.debug(f'User {user_id} not in database')
-            return False
 
     @staticmethod
     def update_user_count(user_id, word, count):
