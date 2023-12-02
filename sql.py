@@ -93,6 +93,19 @@ class SqlStatements:
         SqlStatements._sql_logger.info('All members inserted into the database')
 
     @staticmethod
+    def add_user_has_word(user_id, word, count):
+        """insert new user-word"""
+        SqlStatements._sql_logger.debug(f'Insert new user_has_word user_id: {user_id} word: {word} count: {count}')
+        with SqlStatements._sqlite_connection:
+            SqlStatements.cursor.execute(
+                """insert into user_has_word values(
+                :user_id,
+                :word,
+                :count);""",
+                {'user_id': user_id, 'word': word, 'count': count}
+            )
+
+    @staticmethod
     def get_count(user_id, word):
         """get count of user_id"""
         SqlStatements._sql_logger.debug(f'Get count from user: {user_id} with word: {word}')
@@ -179,7 +192,7 @@ class SqlStatements:
                 )
                 SqlStatements._sql_logger.info(f'Updated count of user: {current_count + count}')
             else:
-                SqlStatements.insert_user_has_word(user_id, word, count)
+                SqlStatements.add_user_has_word(user_id, word, count)
 
         SqlStatements._sql_logger.debug('Exiting insert_update_user_count')
 
@@ -205,19 +218,6 @@ class SqlStatements:
         else:
             SqlStatements._sql_logger.debug(f'User: {user_id} has no association with word: {word}')
             return False
-
-    @staticmethod
-    def insert_user_has_word(user_id, word, count):
-        """insert new user-word"""
-        SqlStatements._sql_logger.debug(f'Insert new user_has_word user_id: {user_id} word: {word} count: {count}')
-        with SqlStatements._sqlite_connection:
-            SqlStatements.cursor.execute(
-                """insert into user_has_word values(
-                :user_id,
-                :word,
-                :count);""",
-                {'user_id': user_id, 'word': word, 'count': count}
-            )
 
     @staticmethod
     def get_total_highest_count_column():
