@@ -17,14 +17,22 @@ class SqlStatements:
         _sql_logger.error(f'Connection to database failed: {error}')
 
     @staticmethod
-    def _execute_query(query, success_message, error_message, params=None):
+    def _execute_query(query, success_message, error_message, params=None, fetch_one=None):
         try:
             with SqlStatements._sqlite_connection:
                 if params:
                     SqlStatements.cursor.execute(query, params)
                 else:
-                    SqlStatements.cursor.executescript(query)
-            SqlStatements._sql_logger.info(success_message)
+                    SqlStatements.cursor.execute(query)
+
+                if fetch_one:
+                    result = SqlStatements.cursor.fetchone()
+                else:
+                    result = SqlStatements.cursor.fetchall()
+
+                SqlStatements._sql_logger.info(success_message)
+                return result
+
         except sqlite3.Error as error:
             SqlStatements._sql_logger.error(f'{error_message}: {error}')
 
@@ -40,18 +48,28 @@ class SqlStatements:
     @staticmethod
     def create_tables():
         """create tables for database"""
-        script = """
-            -- create user table
+        # Create user table
+        user_table_script = """
             create table if not exists user (
                 id integer primary key
-            );
-            
-            -- create word table
+            );"""
+        SqlStatements._execute_query(
+            user_table_script,
+            'User table created',
+            'Failed to create user table'
+        )
+        # Create word table
+        word_table_script = """
             create table if not exists word (
                 name text primary key
-            );
-            
-            -- create user_has_word table
+            );"""
+        SqlStatements._execute_query(
+            word_table_script,
+            'Word table created',
+            'Failed to create word table'
+        )
+        # Create user_has_word table
+        user_has_word_table_script = """
             create table if not exists user_has_word (
                 user_id integer,
                 word_name varchar(45),
@@ -60,9 +78,9 @@ class SqlStatements:
                 foreign key (word_name) references word (name)
             );"""
         SqlStatements._execute_query(
-            script,
-            'Tables created',
-            'Failed to create tables'
+            user_has_word_table_script,
+            'User_has_word table created',
+            'Failed to create user_has_word table'
         )
 
     @staticmethod
@@ -113,38 +131,31 @@ class SqlStatements:
     def get_count(user_id, word):
         """Get count for a specific user_id and word"""
         SqlStatements._sql_logger.debug(f'Get count for user: {user_id} with word: {word}')
-        try:
-            with SqlStatements._sqlite_connection:
-                count = SqlStatements.cursor.execute(
-                    """select count from user_has_word
-                    where user_id in (:user_id)
-                    and word_name in (:word);""",
-                    {'user_id': user_id, 'word': word}
-                ).fetchone()[0]
-        except Exception as error:
-            SqlStatements._sql_logger.error(f'Error executing sql query: {error}')
-            return None
-        else:
-            SqlStatements._sql_logger.info(f'Retrieved count: {count}')
-            return count
+
+        query = """select count from user_has_word
+                   where user_id = :user_id
+                   and word_name = :word;"""
+
+        count = SqlStatements._execute_query(
+            query,
+            f'Retrieved count for user: {user_id} with word: {word}',
+            f'Error getting count for user: {user_id} with word: {word}',
+            {'user_id': user_id, 'word': word},
+            True
+        )
+        return count[0]
 
     @staticmethod
     def get_words():
         """get all words from database"""
         SqlStatements._sql_logger.debug('Get all words from database')
 
-        query = """select name from word"""
-        success_message = 'Words retrieved successfully from the database'
-        error_message = 'Error retrieving words from the database'
-
-        with SqlStatements._sqlite_connection:
-            words_database = SqlStatements._execute_query(
-                query,
-                success_message,
-                error_message,
-                fetch_result='all'
-            )
-
+        words_database = [word[0] for word in SqlStatements._execute_query(
+            """select * from word""",
+            'Words retrieved successfully from the database',
+            'Error retrieving words from the database',
+            fetch_one=False
+        )]
         SqlStatements._sql_logger.info(f'Words from database: {words_database}')
         return words_database
 
@@ -152,94 +163,91 @@ class SqlStatements:
     def get_all_users():
         """Get all user IDs from the database"""
         SqlStatements._sql_logger.debug('Get all users from database')
-        try:
-            with SqlStatements._sqlite_connection:
-                users = SqlStatements.cursor.execute(
-                    """select id from user;"""
-                ).fetchall()
 
-                user_ids = [user[0] for user in users]
-                SqlStatements._sql_logger.info(f'All user IDs from database: {user_ids}')
-                return user_ids
-        except sqlite3.Error as error:
-            SqlStatements._sql_logger.error(f'Error getting all users: {error}')
-            return None
+        user_ids = SqlStatements._execute_query(
+            """select id from user;""",
+            'All user IDs successfully retrieved from the database',
+            'Error getting all users',
+            fetch_one=False
+        )
+        user_ids = [user[0] for user in user_ids]
+
+        SqlStatements._sql_logger.info(f'User_ids from database: {user_ids}')
+
+        return user_ids
 
     @staticmethod
     def get_highest_count_column(word):
         """get user with the highest count"""
-        SqlStatements._sql_logger.debug(f'Get user with highest count from word {word}')
-        try:
-            with SqlStatements._sqlite_connection:
-                highest_count_column = SqlStatements.cursor.execute(
-                    """select * from user_has_word
-                        where count = (
-                        select max(count) from user_has_word
-                        where word_name = :word
-                        )""",
-                    {'word': word}
-                ).fetchone()
-        except TypeError as error:
-            SqlStatements._sql_logger.error(error)
-            return None
-        SqlStatements._sql_logger.debug(f'Got highest count: {highest_count_column}')
-        return highest_count_column
+        query = """
+            select * from user_has_word
+            where count = (
+                select max(count) from user_has_word
+                where word_name = :word
+            )"""
+
+        result = SqlStatements._execute_query(
+            query,
+            f'Got highest count for word {word}',
+            f'Error while getting highest count for word {word}',
+            {'word': word},
+            fetch_one=True
+        )
+        return result
 
     @staticmethod
     def update_user_count(user_id, word, count):
         """Update user count"""
         SqlStatements._sql_logger.info('Updating count')
-        with SqlStatements._sqlite_connection:
-            # sum count
-            if SqlStatements.check_user_has_word(user_id, word):
-                current_count = SqlStatements.get_count(user_id, word)
-                SqlStatements.cursor.execute(
-                    """update user_has_word set count = :count
-                    where user_id = :user_id
-                    and word_name = :word;""",
-                    {'count': current_count + count, 'user_id': user_id, 'word': word}
-                )
-                SqlStatements._sql_logger.info(f'Updated count of user: {current_count + count}')
-            else:
-                SqlStatements.add_user_has_word(user_id, word, count)
+        if SqlStatements.check_user_has_word(user_id, word):
+            current_count = SqlStatements.get_count(user_id, word)
 
-        SqlStatements._sql_logger.debug('Exiting insert_update_user_count')
+            query = """update user_has_word
+                        set count = :count
+                        where user_id = :user_id
+                        and word_name = :word;"""
+
+            SqlStatements._execute_query(
+                query,
+                f'Updated count of user: {current_count + count}',
+                'Error updating user count',
+                {'count': current_count + count, 'user_id': user_id, 'word': word}
+            )
+        else:
+            SqlStatements.add_user_has_word(user_id, word, count)
+
+        SqlStatements._sql_logger.debug('Exiting update_user_count')
 
     @staticmethod
     def check_user_has_word(user_id, word):
         """Check if user has association with word"""
         SqlStatements._sql_logger.debug('Check if user has association with word')
 
-        with SqlStatements._sqlite_connection:
-            exists = SqlStatements.cursor.execute(
-                """select exists (
-                    select 1 from user_has_word
-                    where user_id = :user_id
-                    and word_name = :word_name
-                )""",
-                {'user_id': user_id, 'word_name': word}
-            ).fetchone()[0]
+        query = """select exists (
+                     select 1 from user_has_word
+                     where user_id = :user_id
+                     and word_name = :word
+                     )"""
 
-        SqlStatements._sql_logger.debug(
-            f'User: {user_id} has association with word: {word}'
-            if exists
-            else f'User: {user_id} has no association with word: {word}'
+        exists = SqlStatements._execute_query(
+            query,
+            f'User: {user_id} has association with word: {word}',
+            f'User: {user_id} has no association with word: {word}',
+            {'user_id': user_id, 'word': word},
+            fetch_one=True
         )
-        return exists
+        return exists[0]
 
     @staticmethod
     def get_total_highest_count_column():
         """Get the column with the highest count from user_has_word table"""
-        try:
-            with SqlStatements._sqlite_connection:
-                thc_column = SqlStatements.cursor.execute(
-                    """select * from user_has_word
-                    order by count desc limit 1;"""
-                ).fetchone()
+        query = """select * from user_has_word
+                   order by count desc limit 1;"""
 
-                return thc_column
-        except sqlite3.Error as error:
-            SqlStatements._sql_logger.error(f'Error getting highest count column: {error}')
-
-        SqlStatements._sql_logger.debug('No data found in user_has_word table.')
-        return None
+        result = SqlStatements._execute_query(
+            query,
+            'Successfully retrieved highest count column.',
+            'Error getting highest count column',
+            fetch_one=True
+        )
+        return result
