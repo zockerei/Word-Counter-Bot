@@ -17,7 +17,7 @@ class SqlStatements:
         _sql_logger.error(f'Connection to database failed: {error}')
 
     @staticmethod
-    def _execute_query(query, success_message, error_message, params=None, fetch_one=None):
+    def _execute_query(query, success_message='Success', error_message='Error', params=None, fetch_one=None):
         try:
             with SqlStatements._sqlite_connection:
                 if params:
@@ -30,7 +30,7 @@ class SqlStatements:
                 else:
                     result = SqlStatements.cursor.fetchall()
 
-                SqlStatements._sql_logger.info(success_message)
+                SqlStatements._sql_logger.debug(success_message)
                 return result
 
         except sqlite3.Error as error:
@@ -40,9 +40,9 @@ class SqlStatements:
     def drop_tables():
         """drop all tables"""
         SqlStatements._sql_logger.debug('Dropping all tables')
-        SqlStatements.cursor.execute('drop table user')
-        SqlStatements.cursor.execute('drop table user_has_word')
-        SqlStatements.cursor.execute('drop table word')
+        SqlStatements.cursor.execute('drop table if exists user')
+        SqlStatements.cursor.execute('drop table if exists user_has_word')
+        SqlStatements.cursor.execute('drop table if exists word')
         SqlStatements._sql_logger.info('Dropped all tables')
 
     @staticmethod
@@ -143,6 +143,9 @@ class SqlStatements:
             {'user_id': user_id, 'word': word},
             True
         )
+        SqlStatements._sql_logger.debug(f'Count: {count}')
+        if count is None:
+            return None
         return count[0]
 
     @staticmethod
@@ -193,6 +196,7 @@ class SqlStatements:
             {'word': word},
             fetch_one=True
         )
+        SqlStatements._sql_logger.debug(f'Result: {result}')
         return result
 
     @staticmethod
@@ -210,8 +214,7 @@ class SqlStatements:
             SqlStatements._execute_query(
                 query,
                 f'Updated count of user: {current_count + count}',
-                'Error updating user count',
-                {'count': current_count + count, 'user_id': user_id, 'word': word}
+                params={'count': current_count + count, 'user_id': user_id, 'word': word}
             )
         else:
             SqlStatements.add_user_has_word(user_id, word, count)
@@ -231,11 +234,12 @@ class SqlStatements:
 
         exists = SqlStatements._execute_query(
             query,
-            f'User: {user_id} has association with word: {word}',
-            f'User: {user_id} has no association with word: {word}',
+            f'Success in check_user_has_word',
+            f'Error in check_user_has_word',
             {'user_id': user_id, 'word': word},
             fetch_one=True
         )
+        SqlStatements._sql_logger.debug(f'Result: {exists}')
         return exists[0]
 
     @staticmethod

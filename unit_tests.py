@@ -205,7 +205,18 @@ class TestSqlModule(unittest.TestCase):
         for user_id, word, count in zip(user_ids, words, counts):
             self.sql_statements.add_user_has_word(user_id, word, count)
 
-        # Call get_count method
+        # Call get_count method with non-existing user and word
+        non_existing_user_id = 987654321012345678
+        non_existing_word = 'non_existing_word'
+        non_existing_count = self.sql_statements.get_count(non_existing_user_id, non_existing_word)
+
+        # Verify that the count for non-existing user and word is None
+        self.assertIsNone(
+            non_existing_count,
+            'Count for non-existing user and word should be None'
+        )
+
+        # Call get_count method for existing user and word
         self._logger.debug('Calling get_count method')
         retrieved_counts = [
             self.sql_statements.get_count(user_id, word)
@@ -214,7 +225,13 @@ class TestSqlModule(unittest.TestCase):
         ]
 
         # Verify that the retrieved counts are correct
-        self.assertListEqual(retrieved_counts, counts, 'Retrieved counts do not match expected counts')
+        for retrieved_count, expected_count in zip(retrieved_counts, counts):
+            self.assertEqual(
+                retrieved_count,
+                expected_count,
+                'Retrieved counts do not match expected counts'
+            )
+
         self._logger.info('get_count method tested successfully')
 
     def testGetWords(self):

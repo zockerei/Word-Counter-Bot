@@ -14,21 +14,24 @@ class Embed:
             color=color,
             title=title,
         )
-        self._embed.set_thumbnail(url=thumbnail_url)
+        if thumbnail_url is not None:
+            self._embed.set_thumbnail(url=thumbnail_url)
 
     # logging setup
     _embed_logger = logging.getLogger('bot.embed')
     _embed_logger.debug('Embed logger set up')
 
     def add_description(self, description):
-        """add description to embed"""
+        """Add description to embed."""
         Embed._embed_logger.debug('Adding description to embed')
         self._embed.description = f'{description}\n'
+        return self
 
     def add_footer(self, footer):
-        """add footer to embed"""
+        """Add footer to embed."""
         Embed._embed_logger.debug('Adding footer to embed')
         self._embed.set_footer(text=f'{footer}')
+        return self
 
     def to_dict(self):
         Embed._embed_logger.debug('Convert embed to dictionary')
