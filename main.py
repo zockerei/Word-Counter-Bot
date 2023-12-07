@@ -6,7 +6,7 @@ import yaml
 import sql
 import embed
 
-COMMAND_PREFIXES = ('/c', '/hc', '/thc', '/sw')
+COMMAND_PREFIXES = ('/c', '/hc', '/thc', '/sw', '/aw')
 sql_statements = sql.SqlStatements()
 
 # Logging setup
@@ -122,6 +122,9 @@ async def handle_command(message, prefix):
             return
         case '/sw':
             await handle_show_words_command(message)
+            return
+        case '/aw':
+            await handle_add_words_command(message)
             return
 
 
@@ -255,6 +258,27 @@ async def handle_show_words_command(message):
     )
     await message.channel.send(embed=words_embed)
     bot_logger.info('Message for all words sent')
+    return
+
+
+async def handle_add_words_command(message):
+    """add words to database"""
+    bot_logger.debug('Add words to database')
+
+    # get words and add to database
+    words_from_message = message.content.lower().split(' ')[1:]
+    sql_statements.add_words(*words_from_message)
+
+    # create embed for success
+    add_words_embed = embed.Embed(
+        client.user.avatar,
+        title=f'Words added'
+    ).add_description(
+        f"""Words that were added to the database:
+        {', '.join(words_from_message)}"""
+    )
+    await message.channel.send(embed=add_words_embed)
+    bot_logger.info('Message for adding words sent')
     return
 
 
