@@ -6,7 +6,7 @@ import yaml
 import sql
 import embed
 
-COMMAND_PREFIXES = ('/c', '/hc', '/thc')
+COMMAND_PREFIXES = ('/c', '/hc', '/thc', '/sw')
 sql_statements = sql.SqlStatements()
 
 # Logging setup
@@ -120,76 +120,9 @@ async def handle_command(message, prefix):
         case '/thc':
             await handle_total_highest_count_command(message)
             return
-
-
-async def handle_total_highest_count_command(message):
-    """get the user with the highest amount of all words"""
-    bot_logger.debug('Get user with highest amount of all words')
-    total_highest_count = sql_statements.get_total_highest_count_column()
-
-    if total_highest_count is None:
-        # make embed when no user has said the word
-        bot_logger.debug(f'Creating embed. No User has said any word')
-        no_count_embed = embed.Embed(
-            client.user.avatar,
-            title=f'Dead Server'
-        ).add_description(
-            f"""No User in this Server has said any word...\n
-            This is very sospechoso... :sus:"""
-        )
-        await message.channel.send(embed=no_count_embed)
-        return
-
-    # make embed
-    bot_logger.debug('Making thc_embed')
-    username = await client.fetch_user(total_highest_count[0])
-    thc_embed = embed.Embed(
-        client.user.avatar,
-        title=f'Highest count of all words'
-    ).add_description(
-        f"""The winner for the Highest count of all words is.... ||{username}!||\n
-        Who has said {total_highest_count[1]} {total_highest_count[2]} times"""
-    ).add_footer(
-        f'Imagine'
-    )
-    await message.channel.send(embed=thc_embed)
-    bot_logger.info('Message for total highest count sent')
-    return
-
-
-async def handle_highest_count_command(message):
-    """get the highest count from all users of a word"""
-    bot_logger.debug('Get highest count of user from word')
-    word = message.content.lower().split(' ')[1]
-    highest_count_tuple = sql_statements.get_highest_count_column(word)
-
-    if highest_count_tuple is None:
-        # make embed when no user has said the word
-        bot_logger.debug(f'Creating embed. No User has said the word: {word}')
-        no_count_embed = embed.Embed(
-            client.user.avatar,
-            title=f'Dead Server'
-        )
-        no_count_embed.add_description(
-            f"""No User in this Server has said {word}\n
-            This is very sospechoso... :sus:"""
-        )
-        await message.channel.send(embed=no_count_embed)
-        return
-
-    # make embed
-    highest_count_embed = embed.Embed(
-        client.user.avatar,
-        title=f'Highest count from all Users'
-    )
-    username = await client.fetch_user(highest_count_tuple[0])
-    highest_count_embed.add_description(
-        f"""The user who has said {word} the most is ||{username}||\n
-        With an impressive amount of {highest_count_tuple[2]} times"""
-    )
-    await message.channel.send(embed=highest_count_embed)
-    bot_logger.debug('Highest count message sent')
-    return
+        case '/sw':
+            await handle_show_words_command(message)
+            return
 
 
 async def handle_count_command(message):
@@ -234,6 +167,94 @@ async def handle_count_command(message):
     )
     await message.channel.send(embed=count_embed)
     bot_logger.debug('Count message sent')
+    return
+
+
+async def handle_highest_count_command(message):
+    """get the highest count from all users of a word"""
+    bot_logger.debug('Get highest count of user from word')
+    word = message.content.lower().split(' ')[1]
+    highest_count_tuple = sql_statements.get_highest_count_column(word)
+
+    if highest_count_tuple is None:
+        # make embed when no user has said the word
+        bot_logger.debug(f'Creating embed. No User has said the word: {word}')
+        no_count_embed = embed.Embed(
+            client.user.avatar,
+            title=f'Dead Server'
+        )
+        no_count_embed.add_description(
+            f"""No User in this Server has said {word}\n
+            This is very sospechoso... :sus:"""
+        )
+        await message.channel.send(embed=no_count_embed)
+        return
+
+    # make embed
+    highest_count_embed = embed.Embed(
+        client.user.avatar,
+        title=f'Highest count from all Users'
+    )
+    username = await client.fetch_user(highest_count_tuple[0])
+    highest_count_embed.add_description(
+        f"""The user who has said {word} the most is ||{username}||\n
+        With an impressive amount of {highest_count_tuple[2]} times"""
+    )
+    await message.channel.send(embed=highest_count_embed)
+    bot_logger.debug('Highest count message sent')
+    return
+
+
+async def handle_total_highest_count_command(message):
+    """get the user with the highest amount of all words"""
+    bot_logger.debug('Get user with highest amount of all words')
+    total_highest_count = sql_statements.get_total_highest_count_column()
+
+    if total_highest_count is None:
+        # make embed when no user has said the word
+        bot_logger.debug(f'Creating embed. No User has said any word')
+        no_count_embed = embed.Embed(
+            client.user.avatar,
+            title=f'Dead Server'
+        ).add_description(
+            f"""No User in this Server has said any word...\n
+            This is very sospechoso... :sus:"""
+        )
+        await message.channel.send(embed=no_count_embed)
+        return
+
+    # make embed
+    bot_logger.debug('Making thc_embed')
+    username = await client.fetch_user(total_highest_count[0])
+    thc_embed = embed.Embed(
+        client.user.avatar,
+        title=f'Highest count of all words'
+    ).add_description(
+        f"""The winner for the Highest count of all words is.... ||{username}!||\n
+        Who has said {total_highest_count[1]} {total_highest_count[2]} times"""
+    ).add_footer(
+        f'Imagine'
+    )
+    await message.channel.send(embed=thc_embed)
+    bot_logger.info('Message for total highest count sent')
+    return
+
+
+async def handle_show_words_command(message):
+    """show all words from database"""
+    bot_logger.debug('Show all words from database')
+    words_database = sql_statements.get_words()
+
+    # create embed
+    words_embed = embed.Embed(
+        client.user.avatar,
+        title=f'All words'
+    ).add_description(
+        f"""Here is a list of all the words you should rather not say...\n
+        {', '.join(words_database)}"""
+    )
+    await message.channel.send(embed=words_embed)
+    bot_logger.info('Message for all words sent')
     return
 
 
