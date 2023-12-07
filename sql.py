@@ -97,6 +97,7 @@ class SqlStatements:
                 {'word': word}
             )
 
+    @staticmethod
     def add_user_ids(*user_ids):
         """Add all server members to the database"""
         SqlStatements._sql_logger.debug('Inserting all users to the database')
