@@ -128,6 +128,18 @@ class SqlStatements:
         )
 
     @staticmethod
+    def remove_word(word):
+        """Remove word from database"""
+        query = """delete from word where name = :word;"""
+
+        SqlStatements._execute_query(
+            query,
+            f'Removed word: {word} successfully',
+            f'Error removing word: {word}',
+            {'word': word}
+        )
+
+    @staticmethod
     def get_count(user_id, word):
         """Get count for a specific user_id and word"""
         SqlStatements._sql_logger.debug(f'Get count for user: {user_id} with word: {word}')
