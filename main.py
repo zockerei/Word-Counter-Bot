@@ -50,7 +50,6 @@ async def on_ready():
     bot_logger.info(f'Logged in as {client.user}')
 
     # create sql table and add words
-    sql_statements.drop_tables()
     sql_statements.create_tables()
     sql_statements.add_words(*words)
 
