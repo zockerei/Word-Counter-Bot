@@ -6,7 +6,7 @@ import yaml
 import sql
 import embed
 
-COMMAND_PREFIXES = ('/c', '/hc', '/thc', '/sw', '/aw')
+COMMAND_PREFIXES = ('/c', '/hc', '/thc', '/sw', '/aw', '/rw')
 sql_statements = sql.SqlStatements()
 
 # Logging setup
@@ -125,6 +125,9 @@ async def handle_command(message, prefix):
             return
         case '/aw':
             await handle_add_words_command(message)
+            return
+        case '/rw':
+            await handle_remove_word_command(message)
             return
 
 
@@ -279,6 +282,27 @@ async def handle_add_words_command(message):
     )
     await message.channel.send(embed=add_words_embed)
     bot_logger.info('Message for adding words sent')
+    return
+
+
+async def handle_remove_word_command(message):
+    """remove word from database"""
+    bot_logger.debug('Removing word from database')
+
+    # get word and remove word
+    remove_word = message.content.lower().split(' ')[1]
+    sql_statements.remove_word(remove_word)
+
+    # create embed
+    remove_word_embed = embed.Embed(
+        client.user.avatar,
+        title=f'Removed word'
+    ).add_description(
+        f"""Removed word from database:
+        words: {remove_word}"""
+    )
+    await message.channel.send(embed=remove_word_embed)
+    bot_logger.info('Message for removing word sent')
     return
 
 
