@@ -28,12 +28,12 @@ loggers:
     propagate: no
 
   bot.main:
-    level: DEBUG
+    level: INFO
     handlers: [file, console]
     propagate: no
 
   bot.sql:
-    level: DEBUG
+    level: INFO
     handlers: [file, console]
     propagate: no
 

@@ -4,3 +4,5 @@ logger.log
 sqlite3.exe
 bot_config.yaml
 word_counter.db
+build/
+main.spec
