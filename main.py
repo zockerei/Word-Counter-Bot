@@ -1,4 +1,5 @@
 # Requirements: python 3.10
+# All imports below
 import argparse
 import discord
 import logging.config
@@ -9,6 +10,18 @@ import embed
 COMMAND_PREFIXES = ('/c', '/hc', '/thc', '/sw', '/aw', '/rw')
 sql_statements = sql.SqlStatements()
 
+# Argument parser
+parser = argparse.ArgumentParser(
+    description="""Word-Counter-Bot for Discord.
+    Needs the logging_config.yaml"""
+)
+parser.add_argument(
+    '-p', '--path',
+    help='Path to config file .yaml',
+    required=True
+)
+config_path = parser.parse_args().path
+
 # Logging setup
 with open('logging_config.yaml', 'rt') as config_file:
     logging_config = yaml.safe_load(config_file.read())
@@ -17,16 +30,6 @@ with open('logging_config.yaml', 'rt') as config_file:
 discord_logger = logging.getLogger('discord')
 bot_logger = logging.getLogger('bot.main')
 bot_logger.debug('Logging setup complete')
-
-# Argument parser
-parser = argparse.ArgumentParser(description='Word-Counter-Bot')
-parser.add_argument(
-    '-p', '--path',
-    help='Path to config file .yaml',
-    required=True
-)
-config_path = parser.parse_args().path
-bot_logger.debug('Got arguments successfully')
 
 # Intents
 intents = discord.Intents.all()
