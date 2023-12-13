@@ -51,7 +51,8 @@ class SqlStatements:
         # Create user table
         user_table_script = """
             create table if not exists user (
-                id integer primary key
+                id integer primary key,
+                permission text check (permission in ('admin', 'user'))
             );"""
         SqlStatements._execute_query(
             user_table_script,
@@ -102,7 +103,7 @@ class SqlStatements:
         """Add all server members to the database"""
         SqlStatements._sql_logger.debug('Inserting all users to the database')
 
-        query = "insert or ignore into user values (:user_id)"
+        query = "insert or ignore into user values (:user_id, 'user')"
         for user_id in set(user_ids):
             SqlStatements._execute_query(
                 query,
@@ -111,6 +112,22 @@ class SqlStatements:
                 {'user_id': user_id}
             )
         SqlStatements._sql_logger.debug('All members inserted into the database')
+
+    @staticmethod
+    def add_admin(user_id):
+        """Add admin to the specific id"""
+        SqlStatements._sql_logger.debug(f'Adding admin to admin_id: {user_id}')
+
+        query = """update user
+                set permission = 'admin'
+                where id = :user_id;"""
+
+        SqlStatements._execute_query(
+            query,
+            f'{user_id} is now admin',
+            f'Failed to make {user_id} admin',
+            {'user_id': user_id}
+        )
 
     @staticmethod
     def add_user_has_word(user_id, word, count):
@@ -131,7 +148,7 @@ class SqlStatements:
     @staticmethod
     def remove_word(word):
         """Remove word from database"""
-        query = """delete from word where name = :word;"""
+        query = "delete from word where name = :word;"
 
         SqlStatements._execute_query(
             query,
@@ -211,6 +228,20 @@ class SqlStatements:
         )
         SqlStatements._sql_logger.debug(f'Result: {result}')
         return result
+    
+    @staticmethod
+    def get_total_highest_count_column():
+        """Get the column with the highest count from user_has_word table"""
+        query = """select * from user_has_word
+                   order by count desc limit 1;"""
+
+        result = SqlStatements._execute_query(
+            query,
+            'Successfully retrieved highest count column.',
+            'Error getting highest count column',
+            fetch_one=True
+        )
+        return result
 
     @staticmethod
     def update_user_count(user_id, word, count):
@@ -256,15 +287,24 @@ class SqlStatements:
         return exists[0]
 
     @staticmethod
-    def get_total_highest_count_column():
-        """Get the column with the highest count from user_has_word table"""
-        query = """select * from user_has_word
-                   order by count desc limit 1;"""
+    def check_user_is_admin(user_id):
+        """Check if user has admin privileges"""
+        SqlStatements._sql_logger.debug(f'Check if user has admin privileges')
 
-        result = SqlStatements._execute_query(
+        query = """select permission from user
+                where id = :user_id"""
+
+        permission = SqlStatements._execute_query(
             query,
-            'Successfully retrieved highest count column.',
-            'Error getting highest count column',
-            fetch_one=True
-        )
-        return result
+            f'Success in check_user_is_admin',
+            f'Error in check_user_is_admin',
+            {'user_id': user_id},
+            True
+        )[0]
+        SqlStatements._sql_logger.debug(f'Permission: {permission}')
+        if permission == 'admin':
+            SqlStatements._sql_logger.debug(f'User {user_id} has admin privileges')
+            return True
+        else:
+            SqlStatements._sql_logger.debug(f'User {user_id} has no admin privileges')
+            return False
