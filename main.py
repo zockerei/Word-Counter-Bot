@@ -38,11 +38,12 @@ client = discord.Client(intents=intents)
 # Load bot configuration
 with open(config_path) as config_file:
     bot_config = yaml.safe_load(config_file)
-    token, words, server_id, channel_id = (
+    token, words, server_id, channel_id, admin_id = (
         bot_config['token'],
         bot_config['word'],
         bot_config['server_id'],
-        bot_config['channel_id']
+        bot_config['channel_id'],
+        bot_config['admin_id']
     )
 bot_logger.info('bot_config loaded')
 
@@ -62,6 +63,9 @@ async def on_ready():
     guild_member_ids = [member.id for member in guild_members]
     bot_logger.debug(f'Server member ids: {guild_member_ids}')
     sql_statements.add_user_ids(*guild_member_ids)
+
+    # add admin user
+    sql_statements.add_admin(admin_id)
     bot_logger.info('Bot ready')
 
 
@@ -291,20 +295,34 @@ async def handle_remove_word_command(message):
     """remove word from database"""
     bot_logger.debug('Removing word from database')
 
-    # get word and remove word
-    remove_word = message.content.lower().split(' ')[1]
-    sql_statements.remove_word(remove_word)
+    # check if user has permission
+    user_id = message.author.id
+    if sql_statements.check_user_is_admin(user_id):
+        # get word and remove word
+        remove_word = message.content.lower().split(' ')[1]
+        sql_statements.remove_word(remove_word)
 
-    # create embed
-    remove_word_embed = embed.Embed(
-        client.user.avatar,
-        title=f'Removed word'
-    ).add_description(
-        f"""Removed word from database:
-        words: {remove_word}"""
-    )
-    await message.channel.send(embed=remove_word_embed)
-    bot_logger.info('Message for removing word sent')
+        # create embed
+        remove_word_embed = embed.Embed(
+            client.user.avatar,
+            title=f'Removed word'
+        ).add_description(
+            f"""Removed word from database:
+            {remove_word}"""
+        )
+        await message.channel.send(embed=remove_word_embed)
+        bot_logger.info('Message for removing word sent')
+    else:
+        # send mod abuse message
+        mod_abuse_embed = embed.Embed(
+            client.user.avatar,
+            title=f'No permission'
+        ).add_description(
+            f"""You have no permission to remove the word\n
+            Call the admin: {await client.fetch_user(admin_id)}"""
+        )
+        await message.channel.send(embed=mod_abuse_embed)
+        bot_logger.info('Message for mod abuser sent')
     return
 
 
