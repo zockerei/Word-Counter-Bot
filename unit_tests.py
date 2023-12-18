@@ -28,55 +28,49 @@ class TestSqlModule(unittest.TestCase):
         # Drop tables afterwards
         self.sql_statements.drop_tables()
 
-    def testCreateTables(self):
+    def test_create_tables(self):
         self._logger.debug("Testing creation of 'user' table")
         self.sql_statements.create_tables()
 
         # Check if 'user' table exists
         self._logger.debug('User table creation test')
         self.sql_statements.cursor.execute(
-            """select name from sqlite_master
-            where type='table' and name='user'"""
+            """SELECT name FROM sqlite_master
+            WHERE type='table' AND name='user'"""
         )
         table_exists = self.sql_statements.cursor.fetchone() is not None
-        self.assertTrue(
-            table_exists,
-            "The 'user' table does not exist"
-        )
+        self.assertTrue(table_exists, "The 'user' table does not exist")
         self._logger.info('User table created successfully')
 
         # Check if 'user' table has expected columns
         self._logger.debug('User table columns test')
-        self.sql_statements.cursor.execute("pragma table_info(user)")
+        self.sql_statements.cursor.execute("PRAGMA table_info(user)")
         columns = [
             row[1]
             for row
             in self.sql_statements.cursor.fetchall()
         ]
-        expected_columns = ['id']
+        expected_columns = ['id', 'permission']  # Updated to include 'permission' column
         self.assertCountEqual(
             columns,
             expected_columns,
-            "'user' table does not have an 'id' column"
+            "'user' table does not have the expected columns"
         )
         self._logger.info("'user' table columns validated")
 
         # Check if 'word' table exists
         self._logger.debug('Word table creation test')
         self.sql_statements.cursor.execute(
-            """select name from sqlite_master
-            where type='table' and name='word'"""
+            """SELECT name FROM sqlite_master
+            WHERE type='table' AND name='word'"""
         )
         table_exists = self.sql_statements.cursor.fetchone() is not None
-        self.assertTrue(
-            table_exists,
-            "The 'word' table does not exist"
-        )
+        self.assertTrue(table_exists, "The 'word' table does not exist")
         self._logger.info('Word table created successfully')
 
         # Check if 'word' table has expected columns
         self._logger.debug('Word table columns test')
-        self.sql_statements.cursor.execute("pragma table_info(word)")
+        self.sql_statements.cursor.execute("PRAGMA table_info(word)")
         columns = [
             row[1]
             for row
@@ -93,8 +87,8 @@ class TestSqlModule(unittest.TestCase):
         # Check if 'user_has_word' table exists
         self._logger.debug('User_has_word table creation test')
         self.sql_statements.cursor.execute(
-            """select name from sqlite_master
-            where type='table' and name='user_has_word'"""
+            """SELECT name FROM sqlite_master
+            WHERE type='table' AND name='user_has_word'"""
         )
         table_exists = self.sql_statements.cursor.fetchone() is not None
         self.assertTrue(table_exists, "The 'user_has_word' table does not exist")
@@ -102,7 +96,7 @@ class TestSqlModule(unittest.TestCase):
 
         # Check if 'user_has_word' table has expected columns
         self._logger.debug('User_has_word table columns test')
-        self.sql_statements.cursor.execute("pragma table_info(user_has_word)")
+        self.sql_statements.cursor.execute("PRAGMA table_info(user_has_word)")
         columns = [
             row[1]
             for row
@@ -115,9 +109,25 @@ class TestSqlModule(unittest.TestCase):
             "'user_has_word' table does not have the expected columns"
         )
         self._logger.info("'user_has_word' table columns validated")
+
+        # Check foreign key constraints
+        self._logger.debug('Foreign key constraints test')
+        self.sql_statements.cursor.execute("PRAGMA foreign_key_list(user_has_word)")
+        foreign_keys = [
+            row[3]  # column name of the referenced table
+            for row
+            in self.sql_statements.cursor.fetchall()
+        ]
+        expected_foreign_keys = ['user_id', 'word_name']
+        self.assertCountEqual(
+            foreign_keys,
+            expected_foreign_keys,
+            "'user_has_word' table does not have the expected foreign key constraints"
+        )
+        self._logger.info("Foreign key constraints validated")
         self._logger.debug("Finished createTables test")
 
-    def testAddWords(self):
+    def test_add_words(self):
         self._logger.debug('Testing add_words method')
 
         words_to_add = ['word1', 'word2', 'word3']
@@ -146,7 +156,7 @@ class TestSqlModule(unittest.TestCase):
         )
         self._logger.info('add_words method tested successfully')
 
-    def testAddUserIds(self):
+    def test_add_user_ids(self):
         self._logger.debug('Testing add_guild_members method')
 
         # Define the guild members to add
@@ -162,7 +172,66 @@ class TestSqlModule(unittest.TestCase):
         self.assertSetEqual(set(added_users), guild_members, 'Not all users were added to the database')
         self._logger.info('add_guild_members method tested successfully')
 
-    def testAddUserHasWord(self):
+    def test_add_admin(self):
+        self._logger.debug('Testing add_admin method')
+
+        # Test adding admin to an existing user (success case)
+        user_id_existing_user = 1
+        self._logger.debug(f"Inserting user {user_id_existing_user} with permission 'user' into the database")
+        self.sql_statements._execute_query(
+            "INSERT INTO user (id, permission) VALUES (:user_id, :permission)",
+            None,
+            None,
+            {'user_id': user_id_existing_user, 'permission': 'user'}
+        )
+
+        # Call the add_admin method
+        self._logger.debug(f"Calling add_admin method for user {user_id_existing_user}")
+        self.sql_statements.add_admin(user_id_existing_user)
+
+        # Check if the user is now an admin in the database
+        result_existing_user = self.sql_statements._execute_query(
+            "SELECT permission FROM user WHERE id = :user_id",
+            None,
+            None,
+            {'user_id': user_id_existing_user},
+            True
+        )
+        self.assertEqual(
+            result_existing_user[0], 'admin',
+            f"User {user_id_existing_user} is not an admin"
+        )
+
+        # Test adding admin to an existing admin (success case)
+        user_id_existing_admin = 2
+        self._logger.debug(f"Inserting admin {user_id_existing_admin} with permission 'admin' into the database")
+        self.sql_statements._execute_query(
+            "INSERT INTO user (id, permission) VALUES (:user_id, :permission)",
+            None,
+            None,
+            {'user_id': user_id_existing_admin, 'permission': 'admin'}
+        )
+
+        # Call the add_admin method
+        self._logger.debug(f"Calling add_admin method for admin {user_id_existing_admin}")
+        self.sql_statements.add_admin(user_id_existing_admin)
+
+        # Check if the admin's permission is still 'admin' in the database
+        result_existing_admin = self.sql_statements._execute_query(
+            "SELECT permission FROM user WHERE id = :user_id",
+            None,
+            None,
+            {'user_id': user_id_existing_admin},
+            True
+        )
+        self.assertEqual(
+            result_existing_admin[0], 'admin',
+            f"User {user_id_existing_admin} is not an admin"
+        )
+
+        self._logger.info('add_admin method tested successfully')
+
+    def test_add_user_has_word(self):
         self._logger.debug('Testing add_user_has_word method')
 
         # Input data for testing
@@ -191,7 +260,38 @@ class TestSqlModule(unittest.TestCase):
             self.assertEqual(row[2], expected_count)
             self._logger.debug(f"Row: {row[0]}, {row[1]}, {row[2]}")
 
-    def testGetCount(self):
+    def test_remove_word(self):
+        self._logger.debug('Testing remove_word method')
+
+        # Set up initial data or conditions needed for the test
+        initial_word = 'TestWord'
+        self._logger.debug(f"Inserting word '{initial_word}' into the database")
+        self.sql_statements._execute_query(
+            "insert into word (name) values (:word);",
+            'Inserted test word successfully',
+            'Error inserting test word',
+            {'word': initial_word}
+        )
+
+        # Call the method you want to test
+        removed_word = 'TestWord'
+        self._logger.debug(f"Calling remove_word method for word '{removed_word}'")
+        self.sql_statements.remove_word(removed_word)
+
+        # Perform assertions to check if the word was removed successfully
+        query = "select count(*) from word where name = :word;"
+        count = self.sql_statements._execute_query(
+            query,
+            'Counted occurrences of word successfully',
+            'Error counting occurrences of word',
+            {'word': removed_word},
+            True
+        )
+        self.assertEqual(count[0], 0, f"The word '{removed_word}' still exists in the database.")
+
+        self._logger.info('remove_word method tested successfully')
+
+    def test_get_count(self):
         self._logger.debug('Testing get_count method')
 
         # Add a user and a word to the database
@@ -234,7 +334,7 @@ class TestSqlModule(unittest.TestCase):
 
         self._logger.info('get_count method tested successfully')
 
-    def testGetWords(self):
+    def test_get_words(self):
         self._logger.debug('Testing get_words method')
 
         # Insert some words into the database for testing
@@ -253,7 +353,7 @@ class TestSqlModule(unittest.TestCase):
         )
         self._logger.info('get_words method tested successfully')
 
-    def testGetAllUsers(self):
+    def test_get_all_users(self):
         self._logger.debug('Testing get_all_users')
 
         # Define user IDs to add
@@ -274,7 +374,7 @@ class TestSqlModule(unittest.TestCase):
 
         self._logger.info('get_all_users method tested successfully')
 
-    def testGetHighestCountColumn(self):
+    def test_get_highest_count_column(self):
         self._logger.debug('Testing get_highest_count_column')
 
         # Input data for testing
@@ -307,7 +407,7 @@ class TestSqlModule(unittest.TestCase):
         self.assertEqual(result[2], expected_count)
         self._logger.debug(f"Result for {word} matches the expected data")
 
-    def testUpdateUserCount(self):
+    def test_update_user_count(self):
         self._logger.debug('Testing update_user_count method')
 
         # Input data for testing
