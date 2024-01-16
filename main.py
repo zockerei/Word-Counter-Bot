@@ -106,7 +106,8 @@ async def on_message(message):
         else:
             bot_logger.debug(f'{prefix} not found in message')
 
-    for word in words:
+    current_words = sql_statements.get_words()
+    for word in current_words:
         if word in message.content.lower():
             await handle_word_count(message, word)
             return
