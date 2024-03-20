@@ -29,7 +29,7 @@ with open('logging_config.yaml', 'rt') as config_file:
 
 discord_logger = logging.getLogger('discord')
 bot_logger = logging.getLogger('bot.main')
-bot_logger.debug('Logging setup complete')
+bot_logger.info('Logging setup complete')
 
 # Intents
 intents = discord.Intents.all()
@@ -90,12 +90,13 @@ async def on_member_join(member):
 
     # send embed to the designated channel
     await client.get_channel(channel_id).send(embed=new_user_embed)
-    bot_logger.debug('New user message sent')
+    bot_logger.info('New user message sent')
 
 
 @client.event
 async def on_message(message):
     """All events with messages (count, highest count, word counter)"""
+    logging.debug('message from user or bot')
     if message.author == client.user:
         return  # Ignore messages from the bot
 
@@ -140,7 +141,7 @@ async def handle_command(message, prefix):
 
 async def handle_count_command(message):
     """get count of user with word"""
-    bot_logger.info('Get count of user with word')
+    bot_logger.debug('Get count of user with word')
 
     # split message
     _, word, user_id = message.content.lower().split(' ')
@@ -214,7 +215,7 @@ async def handle_highest_count_command(message):
         With an impressive amount of {highest_count_tuple[2]} times"""
     )
     await message.channel.send(embed=highest_count_embed)
-    bot_logger.debug('Highest count message sent')
+    bot_logger.info('Highest count message sent')
     return
 
 
@@ -328,7 +329,7 @@ async def handle_remove_word_command(message):
 
 
 async def handle_word_count(message, word):
-    bot_logger.info(f'Word: {word} found in message')
+    bot_logger.debug(f'Word: {word} found in message')
     word_count = message.content.lower().count(word)
     user_id = message.author.id
 
@@ -347,7 +348,7 @@ async def handle_word_count(message, word):
             His first time... :sweat_drops:"""
         )
         await message.channel.send(embed=first_time_embed)
-        bot_logger.debug('First time message sent')
+        bot_logger.info(f'First time message sent: {username}, {word}')
         return
 
     sql_statements.update_user_count(user_id, word, word_count)

@@ -15,7 +15,7 @@ class TestSqlModule(unittest.TestCase):
 
         logging.config.dictConfig(logging_config)
         cls._logger = logging.getLogger('bot.unittest')
-        cls._logger.debug('Logging config complete')
+        cls._logger.info('Logging config complete')
 
     def setUp(self):
         # Create sql_statements variable

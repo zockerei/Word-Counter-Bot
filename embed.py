@@ -19,7 +19,7 @@ class Embed:
 
     # logging setup
     _embed_logger = logging.getLogger('bot.embed')
-    _embed_logger.debug('Embed logger set up')
+    _embed_logger.info('Embed logger set up')
 
     def add_description(self, description):
         """Add description to embed."""

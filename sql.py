@@ -5,14 +5,14 @@ import sqlite3
 class SqlStatements:
     # logging setup
     _sql_logger = logging.getLogger('bot.sql')
-    _sql_logger.debug('Logging setup complete')
+    _sql_logger.info('Logging setup complete')
 
     # sqlite connection
     try:
         _sql_logger.debug('Setting up sql connection')
         _sqlite_connection = sqlite3.connect('word_counter.db')
         cursor = _sqlite_connection.cursor()
-        _sql_logger.debug('Setup of sql connection complete')
+        _sql_logger.info('Setup of sql connection complete')
     except sqlite3.Error as error:
         _sql_logger.error(f'Connection to database failed: {error}')
 
@@ -31,6 +31,7 @@ class SqlStatements:
                     result = SqlStatements.cursor.fetchall()
 
                 SqlStatements._sql_logger.debug(success_message)
+                SqlStatements._sql_logger.debug(f'Result: {result}')
                 return result
 
         except sqlite3.Error as error:
@@ -173,7 +174,6 @@ class SqlStatements:
             {'user_id': user_id, 'word': word},
             True
         )
-        SqlStatements._sql_logger.debug(f'Count: {count}')
         if count is None:
             return None
         return count[0]
@@ -189,7 +189,6 @@ class SqlStatements:
             'Error retrieving words from the database',
             fetch_one=False
         )]
-        SqlStatements._sql_logger.info(f'Words from database: {words_database}')
         return words_database
 
     @staticmethod
@@ -204,9 +203,6 @@ class SqlStatements:
             fetch_one=False
         )
         user_ids = [user[0] for user in user_ids]
-
-        SqlStatements._sql_logger.info(f'User_ids from database: {user_ids}')
-
         return user_ids
 
     @staticmethod
@@ -226,7 +222,6 @@ class SqlStatements:
             {'word': word},
             fetch_one=True
         )
-        SqlStatements._sql_logger.debug(f'Result: {result}')
         return result
     
     @staticmethod
@@ -246,7 +241,7 @@ class SqlStatements:
     @staticmethod
     def update_user_count(user_id, word, count):
         """Update user count"""
-        SqlStatements._sql_logger.info('Updating count')
+        SqlStatements._sql_logger.debug('Updating count')
         if SqlStatements.check_user_has_word(user_id, word):
             current_count = SqlStatements.get_count(user_id, word)
 
@@ -263,7 +258,7 @@ class SqlStatements:
         else:
             SqlStatements.add_user_has_word(user_id, word, count)
 
-        SqlStatements._sql_logger.debug('Exiting update_user_count')
+        SqlStatements._sql_logger.debug('Updated user_count')
 
     @staticmethod
     def check_user_has_word(user_id, word):
@@ -283,7 +278,6 @@ class SqlStatements:
             {'user_id': user_id, 'word': word},
             fetch_one=True
         )
-        SqlStatements._sql_logger.debug(f'Result: {exists}')
         return exists[0]
 
     @staticmethod
@@ -301,7 +295,6 @@ class SqlStatements:
             {'user_id': user_id},
             True
         )[0]
-        SqlStatements._sql_logger.debug(f'Permission: {permission}')
         if permission == 'admin':
             SqlStatements._sql_logger.debug(f'User {user_id} has admin privileges')
             return True
