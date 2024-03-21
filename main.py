@@ -74,7 +74,7 @@ async def on_ready():
 
 
 @client.event
-async def on_member_join(member):
+async def on_member_join(member: discord.Message):
     """Handle the event when a new member joins the server.
 
     This function adds the newly joined member to the database, creates an embed to welcome the new user,
@@ -106,7 +106,7 @@ async def on_member_join(member):
 
 
 @client.event
-async def on_message(message):
+async def on_message(message: discord.Message):
     """Handle the event when a message is received.
 
     This function processes all received messages, checks if they contain specific words,
@@ -240,7 +240,7 @@ async def handle_highest_count_command(message: discord.Message):
         )
         no_count_embed.add_description(
             f"""No User in this Server has said {word}\n
-            This is very sospechoso... :sus:"""
+            Or the word is not being monitored :eyes:"""
         )
         await message.channel.send(embed=no_count_embed)
         return

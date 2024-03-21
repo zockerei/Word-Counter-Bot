@@ -55,7 +55,6 @@ class SqlStatements:
                     result = SqlStatements.cursor.fetchall()
 
                 SqlStatements._sql_logger.debug(success_message)
-                SqlStatements._sql_logger.debug(f'Result: {result}')
                 return result
 
         except sqlite3.Error as error:
@@ -215,7 +214,7 @@ class SqlStatements:
         )
 
     @staticmethod
-    def get_count(user_id: int, word: str) -> tuple | None:
+    def get_count(user_id: int, word: str) -> int | None:
         """
         Get the count for a specific user ID and word.
 
@@ -236,12 +235,12 @@ class SqlStatements:
             query,
             f'Retrieved count for user: {user_id} with word: {word}',
             f'Error getting count for user: {user_id} with word: {word}',
-            {'user_id': user_id, 'word': word},
-            True
+            {'user_id': user_id, 'word': word}
         )
-        if count is None:
+        if not count:
             return None
-        return count[0]
+        SqlStatements._sql_logger.debug(count)
+        return count[0][0]
 
     @staticmethod
     def get_words():
@@ -327,7 +326,7 @@ class SqlStatements:
         return result
 
     @staticmethod
-    def update_user_count(user_id, word, count):
+    def update_user_count(user_id: int, word: str, count: int) -> None:
         """
         Update user count for a specific word.
 
@@ -353,8 +352,6 @@ class SqlStatements:
         else:
             SqlStatements.add_user_has_word(user_id, word, count)
 
-        SqlStatements._sql_logger.debug('Updated user_count')
-
     @staticmethod
     def check_user_has_word(user_id: int, word: str) -> tuple:
         """
@@ -377,7 +374,7 @@ class SqlStatements:
 
         exists = SqlStatements._execute_query(
             query,
-            f'Success in check_user_has_word',
+            f'User: {user_id} has association with the word: {word}',
             f'Error in check_user_has_word',
             {'user_id': user_id, 'word': word},
             fetch_one=True
