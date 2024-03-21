@@ -1,8 +1,12 @@
 import logging
 import sqlite3
+from typing import Optional, List, Tuple, Dict, Any
 
 
 class SqlStatements:
+    """
+    Class containing SQL statements and methods for executing them.
+    """
     # logging setup
     _sql_logger = logging.getLogger('bot.sql')
     _sql_logger.info('Logging setup complete')
@@ -17,7 +21,27 @@ class SqlStatements:
         _sql_logger.error(f'Connection to database failed: {error}')
 
     @staticmethod
-    def _execute_query(query, success_message='Success', error_message='Error', params=None, fetch_one=None):
+    def _execute_query(
+            query: str,
+            success_message: str = 'Success',
+            error_message: str = 'Error',
+            params: Optional[Dict[str, Any]] = None,
+            fetch_one: bool = False,
+    ) -> Optional[List[Tuple]]:
+        """
+        Execute a SQL query and return the result.
+
+        Parameters:
+            query (str): The SQL query to execute.
+            success_message (str, optional): Success message to log. Defaults to 'Success'.
+            error_message (str, optional): Error message to log. Defaults to 'Error'.
+            params (Dict[str, Any], optional): Parameters for the query as a dictionary of parameter names
+                and values. Defaults to None.
+            fetch_one (bool, optional): Whether to fetch only one result. Defaults to False.
+
+        Returns:
+            Optional[List[Tuple]]: A list of tuples containing the result of the query, or None if an error occurred.
+        """
         try:
             with SqlStatements._sqlite_connection:
                 if params:
@@ -36,10 +60,13 @@ class SqlStatements:
 
         except sqlite3.Error as error:
             SqlStatements._sql_logger.error(f'{error_message}: {error}')
+            return None
 
     @staticmethod
     def drop_tables():
-        """drop all tables"""
+        """
+        Drop all tables from the database.
+        """
         SqlStatements._sql_logger.debug('Dropping all tables')
         SqlStatements.cursor.execute('drop table if exists user')
         SqlStatements.cursor.execute('drop table if exists user_has_word')
@@ -48,7 +75,9 @@ class SqlStatements:
 
     @staticmethod
     def create_tables():
-        """create tables for database"""
+        """
+        Create tables for the database.
+        """
         # Create user table
         user_table_script = """
             create table if not exists user (
@@ -87,7 +116,12 @@ class SqlStatements:
 
     @staticmethod
     def add_words(*words):
-        """Add words to the database if they don't exist"""
+        """
+        Add words to the database if they don't exist.
+
+        Parameters:
+            *words (str): Words to add to the database.
+        """
         SqlStatements._sql_logger.debug('Inserting words into the database')
 
         for word in set(words):
@@ -101,7 +135,12 @@ class SqlStatements:
 
     @staticmethod
     def add_user_ids(*user_ids):
-        """Add all server members to the database"""
+        """
+        Add user IDs to the database if they don't exist.
+
+        Parameters:
+            *user_ids (int): User IDs to add to the database.
+        """
         SqlStatements._sql_logger.debug('Inserting all users to the database')
 
         query = "insert or ignore into user values (:user_id, 'user')"
@@ -115,8 +154,13 @@ class SqlStatements:
         SqlStatements._sql_logger.debug('All members inserted into the database')
 
     @staticmethod
-    def add_admin(user_id):
-        """Add admin to the specific id"""
+    def add_admin(user_id: int) -> None:
+        """
+        Add admin permission to the specific user ID.
+
+        Parameters:
+            user_id (int): The ID of the user to be granted admin permission.
+        """
         SqlStatements._sql_logger.debug(f'Adding admin to admin_id: {user_id}')
 
         query = """update user
@@ -131,8 +175,15 @@ class SqlStatements:
         )
 
     @staticmethod
-    def add_user_has_word(user_id, word, count):
-        """Insert new user_has_word"""
+    def add_user_has_word(user_id: int, word: str, count: int) -> None:
+        """
+        Insert a new user_has_word record.
+
+        Parameters:
+            user_id (int): The ID of the user.
+            word (str): The word to be associated with the user.
+            count (int): The count of the word for the user.
+        """
         query = """
             insert into user_has_word values (
                 :user_id,
@@ -147,8 +198,13 @@ class SqlStatements:
         )
 
     @staticmethod
-    def remove_word(word):
-        """Remove word from database"""
+    def remove_word(word: str) -> None:
+        """
+        Remove a word from the database.
+
+        Parameters:
+            word (str): The word to be removed.
+        """
         query = "delete from word where name = :word;"
 
         SqlStatements._execute_query(
@@ -159,8 +215,17 @@ class SqlStatements:
         )
 
     @staticmethod
-    def get_count(user_id, word):
-        """Get count for a specific user_id and word"""
+    def get_count(user_id: int, word: str) -> tuple | None:
+        """
+        Get the count for a specific user ID and word.
+
+        Parameters:
+            user_id (int): The ID of the user.
+            word (str): The word to get the count for.
+
+        Returns:
+            Optional[int]: The count of the word for the user, or None if an error occurred.
+        """
         SqlStatements._sql_logger.debug(f'Get count for user: {user_id} with word: {word}')
 
         query = """select count from user_has_word
@@ -180,7 +245,12 @@ class SqlStatements:
 
     @staticmethod
     def get_words():
-        """get all words from database"""
+        """
+        Get all words from the database.
+
+        Returns:
+            List[str]: A list containing all words retrieved from the database.
+        """
         SqlStatements._sql_logger.debug('Get all words from database')
 
         words_database = [word[0] for word in SqlStatements._execute_query(
@@ -192,8 +262,13 @@ class SqlStatements:
         return words_database
 
     @staticmethod
-    def get_all_users():
-        """Get all user IDs from the database"""
+    def get_all_users() -> List[int]:
+        """
+        Get all user IDs from the database.
+
+        Returns:
+            List[int]: A list of user IDs retrieved from the database.
+        """
         SqlStatements._sql_logger.debug('Get all users from database')
 
         user_ids = SqlStatements._execute_query(
@@ -206,8 +281,16 @@ class SqlStatements:
         return user_ids
 
     @staticmethod
-    def get_highest_count_column(word):
-        """get user with the highest count"""
+    def get_highest_count_column(word: str) -> Tuple | None:
+        """
+        Get user with the highest count for a specific word.
+
+        Parameters:
+            word (str): The word for which to find the user with the highest count.
+
+        Returns:
+            Tuple | None: A tuple representing the user with the highest count for the given word.
+        """
         query = """
             select * from user_has_word
             where count = (
@@ -223,10 +306,15 @@ class SqlStatements:
             fetch_one=True
         )
         return result
-    
+
     @staticmethod
-    def get_total_highest_count_column():
-        """Get the column with the highest count from user_has_word table"""
+    def get_total_highest_count_column() -> Tuple | None:
+        """
+        Get the column with the highest count from user_has_word table.
+
+        Returns:
+            Tuple | None: A tuple representing the row with the highest count in the user_has_word table.
+        """
         query = """select * from user_has_word
                    order by count desc limit 1;"""
 
@@ -240,7 +328,14 @@ class SqlStatements:
 
     @staticmethod
     def update_user_count(user_id, word, count):
-        """Update user count"""
+        """
+        Update user count for a specific word.
+
+        Parameters:
+            user_id (int): The ID of the user.
+            word (str): The word to update the count for.
+            count (int): The count to update.
+        """
         SqlStatements._sql_logger.debug('Updating count')
         if SqlStatements.check_user_has_word(user_id, word):
             current_count = SqlStatements.get_count(user_id, word)
@@ -261,8 +356,17 @@ class SqlStatements:
         SqlStatements._sql_logger.debug('Updated user_count')
 
     @staticmethod
-    def check_user_has_word(user_id, word):
-        """Check if user has association with word"""
+    def check_user_has_word(user_id: int, word: str) -> tuple:
+        """
+        Check if a user has an association with a specific word.
+
+        Parameters:
+            user_id (int): The ID of the user.
+            word (str): The word to check association with.
+
+        Returns:
+            bool: True if the user has an association with the word, False otherwise.
+        """
         SqlStatements._sql_logger.debug('Check if user has association with word')
 
         query = """select exists (
@@ -281,8 +385,16 @@ class SqlStatements:
         return exists[0]
 
     @staticmethod
-    def check_user_is_admin(user_id):
-        """Check if user has admin privileges"""
+    def check_user_is_admin(user_id: int) -> bool:
+        """
+        Check if a user has admin privileges.
+
+        Parameters:
+            user_id (int): The ID of the user.
+
+        Returns:
+            bool: True if the user has admin privileges, False otherwise.
+        """
         SqlStatements._sql_logger.debug(f'Check if user has admin privileges')
 
         query = """select permission from user
