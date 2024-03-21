@@ -180,9 +180,7 @@ class TestSqlModule(unittest.TestCase):
         self._logger.debug(f"Inserting user {user_id_existing_user} with permission 'user' into the database")
         self.sql_statements._execute_query(
             "INSERT INTO user (id, permission) VALUES (:user_id, :permission)",
-            None,
-            None,
-            {'user_id': user_id_existing_user, 'permission': 'user'}
+            params={'user_id': user_id_existing_user, 'permission': 'user'}
         )
 
         # Call the add_admin method
@@ -192,10 +190,8 @@ class TestSqlModule(unittest.TestCase):
         # Check if the user is now an admin in the database
         result_existing_user = self.sql_statements._execute_query(
             "SELECT permission FROM user WHERE id = :user_id",
-            None,
-            None,
-            {'user_id': user_id_existing_user},
-            True
+            params={'user_id': user_id_existing_user},
+            fetch_one=True
         )
         self.assertEqual(
             result_existing_user[0], 'admin',
@@ -207,9 +203,7 @@ class TestSqlModule(unittest.TestCase):
         self._logger.debug(f"Inserting admin {user_id_existing_admin} with permission 'admin' into the database")
         self.sql_statements._execute_query(
             "INSERT INTO user (id, permission) VALUES (:user_id, :permission)",
-            None,
-            None,
-            {'user_id': user_id_existing_admin, 'permission': 'admin'}
+            params={'user_id': user_id_existing_admin, 'permission': 'admin'}
         )
 
         # Call the add_admin method
@@ -219,10 +213,8 @@ class TestSqlModule(unittest.TestCase):
         # Check if the admin's permission is still 'admin' in the database
         result_existing_admin = self.sql_statements._execute_query(
             "SELECT permission FROM user WHERE id = :user_id",
-            None,
-            None,
-            {'user_id': user_id_existing_admin},
-            True
+            params={'user_id': user_id_existing_admin},
+            fetch_one=True
         )
         self.assertEqual(
             result_existing_admin[0], 'admin',
