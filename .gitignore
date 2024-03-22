@@ -6,3 +6,4 @@ bot_config.yaml
 word_counter.db
 build/
 main.spec
+config.txt

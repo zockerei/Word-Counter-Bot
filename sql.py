@@ -154,25 +154,28 @@ class SqlStatements:
         SqlStatements._sql_logger.debug('All members inserted into the database')
 
     @staticmethod
-    def add_admin(user_id: int) -> None:
+    def add_admins(*user_ids: int) -> None:
         """
-        Add admin permission to the specific user ID.
+        Add admin permission to the specific user IDs.
 
         Parameters:
-            user_id (int): The ID of the user to be granted admin permission.
+            *user_ids (int): The IDs of the users to be granted admin permission.
         """
-        SqlStatements._sql_logger.debug(f'Adding admin to admin_id: {user_id}')
+        SqlStatements._sql_logger.debug('Adding admins')
 
         query = """update user
                 set permission = 'admin'
                 where id = :user_id;"""
 
-        SqlStatements._execute_query(
-            query,
-            f'{user_id} is now admin',
-            f'Failed to make {user_id} admin',
-            {'user_id': user_id}
-        )
+        for user_id in set(user_ids):
+            SqlStatements._execute_query(
+                query,
+                f'{user_id} is now admin',
+                f'Failed to make {user_id} admin',
+                {'user_id': user_id}
+            )
+
+        SqlStatements._sql_logger.debug('Admins added successfully')
 
     @staticmethod
     def add_user_has_word(user_id: int, word: str, count: int) -> None:

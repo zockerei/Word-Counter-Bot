@@ -1,6 +1,5 @@
 # Requirements: python 3.11
 # All imports below
-import argparse
 import discord
 import logging.config
 import yaml
@@ -27,14 +26,14 @@ client = discord.Client(intents=intents)
 with open('config.yaml') as config_file:
     bot_config = yaml.safe_load(config_file)
     bot_config = bot_config['bot_config']
-    token, words, server_id, channel_id, admin_id = (
+    token, words, server_id, channel_id, admin_ids = (
         bot_config['token'],
         bot_config['words'],
         bot_config['server_id'],
         bot_config['channel_id'],
-        bot_config['admin_id']
+        bot_config['admin_ids']
     )
-bot_logger.debug(f'{token} | {words} | {server_id} | {channel_id} | {admin_id}')
+bot_logger.debug(f'{token} | {words} | {server_id} | {channel_id} | {admin_ids}')
 bot_logger.info('bot_config loaded')
 
 
@@ -59,7 +58,7 @@ async def on_ready():
     sql_statements.add_user_ids(*guild_member_ids)
 
     # add admin user
-    sql_statements.add_admin(admin_id)
+    sql_statements.add_admins(*admin_ids)
     bot_logger.info('Bot ready')
 
 
@@ -433,7 +432,7 @@ async def permission_abuse(message: discord.Message):
         title=f'No permission'
     ).add_description(
         f"""You have no permission to remove the word\n
-        Call the admin: {await client.fetch_user(admin_id)}"""
+        Call the admin: {await client.fetch_user(admin_ids)}"""
     )
     await message.channel.send(embed=mod_abuse_embed)
     bot_logger.info('Message for mod abuser sent')
