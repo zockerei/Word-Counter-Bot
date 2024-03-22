@@ -10,22 +10,10 @@ import embed
 COMMAND_PREFIXES = ('/c', '/hc', '/thc', '/sw', '/aw', '/rw')
 sql_statements = sql.SqlStatements()
 
-# Argument parser
-parser = argparse.ArgumentParser(
-    description="""Word-Counter-Bot for Discord.
-    Needs the logging_config.yaml"""
-)
-parser.add_argument(
-    '-p', '--path',
-    help='Path to config file .yaml',
-    required=True
-)
-config_path = parser.parse_args().path
-
 # Logging setup
-with open('logging_config.yaml', 'rt') as config_file:
+with open('config.yaml', 'rt') as config_file:
     logging_config = yaml.safe_load(config_file.read())
-    logging.config.dictConfig(logging_config)
+    logging.config.dictConfig(logging_config['logging_config'])
 
 discord_logger = logging.getLogger('discord')
 bot_logger = logging.getLogger('bot.main')
@@ -36,15 +24,17 @@ intents = discord.Intents.all()
 client = discord.Client(intents=intents)
 
 # Load bot configuration
-with open(config_path) as config_file:
+with open('config.yaml') as config_file:
     bot_config = yaml.safe_load(config_file)
+    bot_config = bot_config['bot_config']
     token, words, server_id, channel_id, admin_id = (
         bot_config['token'],
-        bot_config['word'],
+        bot_config['words'],
         bot_config['server_id'],
         bot_config['channel_id'],
         bot_config['admin_id']
     )
+bot_logger.debug(f'{token} | {words} | {server_id} | {channel_id} | {admin_id}')
 bot_logger.info('bot_config loaded')
 
 

@@ -6,7 +6,7 @@ You are not interested in this bot...
 ## Description
 
 Word-Counter-Bot is a Discord bot designed to count occurrences of specified words within messages. It allows users to add multiple words and admin users for tracking purposes.<br>
-The bot offers various commands to facilitate word counting and management.
+I did not test the bot in linux, although im sure it works. Just not with the exe...
 
 ## Commands
 
@@ -19,9 +19,26 @@ The bot offers various commands to facilitate word counting and management.
 
 ## How to run the bot
 
-Word-Counter-Bot requires a configuration file (logging_config.yaml and bot_config.yaml) to run properly. (will be merged if possible)
-Logging_config needs to be in the same directory as the main.exe. bot_config path needs to be passed as an argument.
-Example: main.exe -p "C:\WordCounterBot\bot_config.yaml"
+Word-Counter-Bot requires a configuration file (config.yaml) to run<br>
+config path needs to be passed as an argument.<br>
+Example config.yaml in repository
+
+# Autostart with Windows Fluent Terminal
+
+To set up autostart using Windows Fluent Terminal, follow these steps:
+
+## Step 1: Add a New Profile to Terminal
+
+Create a new profile in the terminal settings.
+
+## Step 2: Configure Command Line
+
+Specify the command line. For example:
+
+- **Command Line Example:** `C:\wordcounter\main.exe`
+- **Starting Directory:** Not necessary
+
+Note: Merely putting `main.exe` in the command line and having the starting directory as `C:\wordcounter` doesn't work. Adjust other settings as per your preference.
 
 ## Installation and Building
 
