@@ -1,4 +1,4 @@
-# Requirements: python 3.10
+# Requirements: python 3.11
 # All imports below
 import argparse
 import discord

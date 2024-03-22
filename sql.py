@@ -65,6 +65,7 @@ class SqlStatements:
     def drop_tables():
         """
         Drop all tables from the database.
+        Only for unit_tests
         """
         SqlStatements._sql_logger.debug('Dropping all tables')
         SqlStatements.cursor.execute('drop table if exists user')
