@@ -9,11 +9,11 @@ class TestSqlModule(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        # Loading logging config
-        with open('logging_config.yaml', 'rt') as config_file:
+        # Logging setup
+        with open('config.yaml', 'rt') as config_file:
             logging_config = yaml.safe_load(config_file.read())
+            logging.config.dictConfig(logging_config['logging_config'])
 
-        logging.config.dictConfig(logging_config)
         cls._logger = logging.getLogger('bot.unittest')
         cls._logger.info('Logging config complete')
 
@@ -185,7 +185,7 @@ class TestSqlModule(unittest.TestCase):
 
         # Call the add_admin method
         self._logger.debug(f"Calling add_admin method for user {user_id_existing_user}")
-        self.sql_statements.add_admin(user_id_existing_user)
+        self.sql_statements.add_admins(user_id_existing_user)
 
         # Check if the user is now an admin in the database
         result_existing_user = self.sql_statements._execute_query(
@@ -208,7 +208,7 @@ class TestSqlModule(unittest.TestCase):
 
         # Call the add_admin method
         self._logger.debug(f"Calling add_admin method for admin {user_id_existing_admin}")
-        self.sql_statements.add_admin(user_id_existing_admin)
+        self.sql_statements.add_admins(user_id_existing_admin)
 
         # Check if the admin's permission is still 'admin' in the database
         result_existing_admin = self.sql_statements._execute_query(

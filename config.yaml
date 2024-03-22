@@ -6,7 +6,9 @@ bot_config:
     - test2
   server_id: 111111111111111111
   channel_id: 111111111111111111
-  admin_id: 1111111111111111
+  admin_ids:
+    - 1111111111111111
+    - 2222222222222222
 
 logging_config:
   version: 1
