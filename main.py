@@ -338,20 +338,26 @@ async def handle_add_words_command(message: discord.Message):
     """
     bot_logger.debug('Add words to database')
 
-    # get words and add to database
-    words_from_message = message.content.lower().split(' ')[1:]
-    sql_statements.add_words(*words_from_message)
+    # check if user has permission
+    user_id = message.author.id
+    if sql_statements.check_user_is_admin(user_id):
+        # get words and add to database
+        words_from_message = message.content.lower().split(' ')[1:]
+        sql_statements.add_words(*words_from_message)
 
-    # create embed for success
-    add_words_embed = embed.Embed(
-        client.user.avatar,
-        title=f'Words added'
-    ).add_description(
-        f"""Words that were added to the database:
-        {', '.join(words_from_message)}"""
-    )
-    await message.channel.send(embed=add_words_embed)
-    bot_logger.info('Message for adding words sent')
+        # create embed for success
+        add_words_embed = embed.Embed(
+            client.user.avatar,
+            title=f'Words added'
+        ).add_description(
+            f"""Words that were added to the database:
+            {', '.join(words_from_message)}"""
+        )
+        await message.channel.send(embed=add_words_embed)
+        bot_logger.info('Message for adding words sent')
+    else:
+        await permission_abuse(message)
+
     return
 
 
@@ -384,16 +390,8 @@ async def handle_remove_word_command(message: discord.Message):
         await message.channel.send(embed=remove_word_embed)
         bot_logger.info('Message for removing word sent')
     else:
-        # send mod abuse message
-        mod_abuse_embed = embed.Embed(
-            client.user.avatar,
-            title=f'No permission'
-        ).add_description(
-            f"""You have no permission to remove the word\n
-            Call the admin: {await client.fetch_user(admin_id)}"""
-        )
-        await message.channel.send(embed=mod_abuse_embed)
-        bot_logger.info('Message for mod abuser sent')
+        await permission_abuse(message)
+
     return
 
 
@@ -431,5 +429,23 @@ async def handle_word_count(message: discord.Message, word: str):
         return
 
     sql_statements.update_user_count(user_id, word, word_count)
+
+
+async def permission_abuse(message: discord.Message):
+    """Send mod abuse message
+
+        Parameters:
+            message (discord.Message): Message needed for sending mod message.
+    """
+    bot_logger.debug('Permission abuse')
+    mod_abuse_embed = embed.Embed(
+        client.user.avatar,
+        title=f'No permission'
+    ).add_description(
+        f"""You have no permission to remove the word\n
+        Call the admin: {await client.fetch_user(admin_id)}"""
+    )
+    await message.channel.send(embed=mod_abuse_embed)
+    bot_logger.info('Message for mod abuser sent')
 
 client.run(token, log_handler=None)
