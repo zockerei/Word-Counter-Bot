@@ -6,7 +6,7 @@ You are not interested in this bot...
 ## Description
 
 Word-Counter-Bot is a Discord bot designed to count occurrences of specified words within messages. It allows users to add multiple words and admin users for tracking purposes.<br>
-I did not test the bot in linux, although im sure it works. Just not with the exe...
+I did not test the bot in linux, although im sure it works. Just use the main, sql and embed.py
 
 ## Commands
 
@@ -14,13 +14,13 @@ I did not test the bot in linux, although im sure it works. Just not with the ex
 - `/hc`: Retrieve the highest count of a word. Example: `/hc word`
 - `/thc`: Retrieve the total highest count of all words. `/thc`
 - `/sw`: Show all tracked words. Example: `/sw`
-- `/aw`: Add words to track (admin-only). Example: `/aw test test1 test2`
-- `/rw`: Remove a word from tracking (admin-only). Example: `/rw test`
+- `/aw`: Add word to database (admin-only). Example: `/aw test`
+- `/rw`: Remove a word from database (admin-only). Example: `/rw test`
 
 ## How to run the bot
 
 Word-Counter-Bot requires a configuration file (config.yaml) to run<br>
-config path needs to be passed as an argument.<br>
+config path needs to be passed as an argument `-p`<br>
 Example config.yaml in repository
 
 # Autostart with Windows Fluent Terminal
