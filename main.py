@@ -119,7 +119,6 @@ async def on_message(message: discord.Message):
     for word in current_words:
         if word in message.content.lower():
             await handle_word_count(message, word)
-            return
         else:
             bot_logger.debug(f'{word} not found in message')
 
@@ -148,7 +147,7 @@ async def handle_command(message: discord.Message, prefix: str):
             await handle_show_words_command(message)
             return
         case '/aw':
-            await handle_add_words_command(message)
+            await handle_add_word_command(message)
             return
         case '/rw':
             await handle_remove_word_command(message)
@@ -316,34 +315,34 @@ async def handle_show_words_command(message: discord.Message):
     return
 
 
-async def handle_add_words_command(message: discord.Message):
-    """Handle the command to add words to the database.
+async def handle_add_word_command(message: discord.Message):
+    """Handle the command to add a word to the database.
 
-    This function retrieves words from the command message, adds them to the database,
+    This function retrieves the word from the command message, adds it to the database,
     creates an embed to confirm the addition, and sends it to the channel.
 
     Parameters:
-        message (discord.Message): The message containing the command.
+        message (discord.Message): The message containing the command + word.
     """
-    bot_logger.debug('Add words to database')
+    bot_logger.debug('Add word to database')
 
     # check if user has permission
     user_id = message.author.id
     if sql_statements.check_user_is_admin(user_id):
-        # get words and add to database
-        words_from_message = message.content.lower().split(' ')[1:]
-        sql_statements.add_words(*words_from_message)
+        # get word and add to database
+        word_from_message = [' '.join(message.content.lower().split(' ')[1:])]
+        sql_statements.add_words(*word_from_message)
 
         # create embed for success
-        add_words_embed = embed.Embed(
+        add_word_embed = embed.Embed(
             client.user.avatar,
-            title=f'Words added'
+            title=f'Word added'
         ).add_description(
-            f"""Words that were added to the database:
-            {', '.join(words_from_message)}"""
+            f"""Word that was added to the database:
+            {', '.join(word_from_message)}"""
         )
-        await message.channel.send(embed=add_words_embed)
-        bot_logger.info('Message for adding words sent')
+        await message.channel.send(embed=add_word_embed)
+        bot_logger.info('Message for adding word sent')
     else:
         await permission_abuse(message)
 
