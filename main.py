@@ -119,7 +119,6 @@ async def on_message(message: discord.Message):
     for word in current_words:
         if word in message.content.lower():
             await handle_word_count(message, word)
-            return
         else:
             bot_logger.debug(f'{word} not found in message')
 
