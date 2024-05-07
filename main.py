@@ -364,8 +364,8 @@ async def handle_remove_word_command(message: discord.Message):
     user_id = message.author.id
     if sql_statements.check_user_is_admin(user_id):
         # get word and remove word
-        remove_word = message.content.lower().split(' ')[1]
-        sql_statements.remove_word(remove_word)
+        word_from_message = ' '.join(message.content.lower().split(' ')[1:])
+        sql_statements.remove_word(word_from_message)
 
         # create embed
         remove_word_embed = embed.Embed(
@@ -373,7 +373,7 @@ async def handle_remove_word_command(message: discord.Message):
             title=f'Removed word'
         ).add_description(
             f"""Removed word from database:
-            {remove_word}"""
+            {word_from_message}"""
         )
         await message.channel.send(embed=remove_word_embed)
         bot_logger.info('Message for removing word sent')
