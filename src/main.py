@@ -1,10 +1,8 @@
 # Requirements: python 3.11
-import os
-import sys
 import discord
 import logging.config
 import yaml
-from config import LOGGING_CONFIG_PATH, BOT_CONFIG_PATH, DB_PATH, LOG_FILE_PATH
+from config import LOGGING_CONFIG_PATH, BOT_CONFIG_PATH, LOG_FILE_PATH
 import sql
 import embed
 
@@ -21,7 +19,7 @@ bot_logger = logging.getLogger('bot.main')
 bot_logger.info('Logging setup complete')
 
 # Initialize SQL statements with the correct database path
-sql_statements = sql.SqlStatements(db_path=str(DB_PATH))
+sql_statements = sql.SqlStatements()
 
 # Intents
 intents = discord.Intents.default()
@@ -166,6 +164,14 @@ async def handle_count_command(message: discord.Message):
     _, word, user_id = message.content.lower().split(' ')
     converted_user_id = user_id.replace('<', '').replace('>', '').replace('@', '')
 
+    try:
+        # Convert the user ID to an integer
+        converted_user_id = int(converted_user_id)
+    except ValueError:
+        bot_logger.error(f"Invalid user ID: {converted_user_id}")
+        await message.channel.send("Invalid user ID. Please use a valid user mention or ID.")
+        return
+
     # convert and get username
     count_user_id = sql_statements.get_count(converted_user_id, word)
     username = await client.fetch_user(converted_user_id)
@@ -181,6 +187,7 @@ async def handle_count_command(message: discord.Message):
             (Or he tricked the system)"""
         )
         await message.channel.send(embed=zero_count_embed)
+        return
 
     # send message with count
     bot_logger.debug('Creating count embed')
@@ -193,14 +200,13 @@ async def handle_count_command(message: discord.Message):
 
     # set footer
     highest_count_tuple = sql_statements.get_highest_count_column(word)
-    username = await client.fetch_user(highest_count_tuple[0])
+    highest_count_user = await client.fetch_user(highest_count_tuple[0])
     count_embed.add_footer(
         f'The person who has said {word} the most is '
-        f'{username} with {highest_count_tuple[2]} times'
+        f'{highest_count_user} with {highest_count_tuple[2]} times'
     )
     await message.channel.send(embed=count_embed)
     bot_logger.debug('Count message sent')
-    return
 
 
 async def handle_highest_count_command(message: discord.Message):
