@@ -79,7 +79,7 @@ async def on_member_join(member: discord.Member):
     sql_statements.add_user_ids(member.id)
 
     # create embed for new user
-    username = await client.fetch_user(member.id)
+    username = member.display_name 
     new_user_embed = embed.Embed(
         client.user.avatar,
         title='A new victim'
@@ -174,7 +174,7 @@ async def handle_count_command(message: discord.Message):
 
     # convert and get username
     count_user_id = sql_statements.get_count(converted_user_id, word)
-    username = await client.fetch_user(converted_user_id)
+    username = client.get_user(converted_user_id).display_name 
 
     if count_user_id is None:
         # create embed for 0 count user
@@ -200,7 +200,7 @@ async def handle_count_command(message: discord.Message):
 
     # set footer
     highest_count_tuple = sql_statements.get_highest_count_column(word)
-    highest_count_user = await client.fetch_user(highest_count_tuple[0])
+    highest_count_user = client.get_user(highest_count_tuple[0]).display_name 
     count_embed.add_footer(
         f'The person who has said {word} the most is '
         f'{highest_count_user} with {highest_count_tuple[2]} times'
@@ -238,7 +238,7 @@ async def handle_highest_count_command(message: discord.Message):
         client.user.avatar,
         title=f'Highest count from all Users'
     )
-    username = await client.fetch_user(highest_count_tuple[0])
+    username = client.get_user(highest_count_tuple[0]).display_name 
     highest_count_embed.add_description(
         f"""The user who has said {word} the most is ||{username}||\n
         With an impressive amount of {highest_count_tuple[2]} times"""
@@ -265,19 +265,19 @@ async def handle_total_highest_count_command(message: discord.Message):
             title=f'Dead Server'
         ).add_description(
             f"""No User in this Server has said any word...\n
-            This is very sospechoso... :sus:"""
+            Or they tricked the system (not hard)"""
         )
         await message.channel.send(embed=no_count_embed)
         return
 
     # make embed
     bot_logger.debug('Making thc_embed')
-    username = await client.fetch_user(total_highest_count[0])
+    username = client.get_user(total_highest_count[0]).display_name 
     thc_embed = embed.Embed(
         client.user.avatar,
         title=f'Highest count of all words'
     ).add_description(
-        f"""The winner for the Highest count of all words is.... ||{username}!||\n
+        f"""The winner for the Highest count of all words is... ||{username}!||\n
         Who has said {total_highest_count[1]} {total_highest_count[2]} times"""
     ).add_footer(
         f'Imagine'
@@ -386,7 +386,7 @@ async def handle_word_count(message: discord.Message, word: str):
         bot_logger.debug(f'First time {user_id} has said {word}')
         sql_statements.update_user_count(user_id, word, word_count)
 
-        username = await client.fetch_user(user_id)
+        username = message.author.display_name 
 
         # Create embed
         first_time_embed = embed.Embed(
@@ -410,12 +410,13 @@ async def permission_abuse(message: discord.Message):
         message (discord.Message): Message needed for sending mod message.
     """
     bot_logger.debug('Permission abuse')
+    admin_user = client.get_user(admin_ids[0]).display_name
     mod_abuse_embed = embed.Embed(
         client.user.avatar,
         title=f'No permission'
     ).add_description(
         f"""You have no permission to remove the word\n
-        Call the admin: {await client.fetch_user(admin_ids)}"""
+        Call the admin: {admin_user}"""
     )
     await message.channel.send(embed=mod_abuse_embed)
     bot_logger.info('Message for mod abuser sent')
