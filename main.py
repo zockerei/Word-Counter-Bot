@@ -1,12 +1,11 @@
 # Requirements: python 3.11
-# All imports below
 import discord
 import logging.config
 import yaml
 import sql
 import embed
 
-COMMAND_PREFIXES = ('/c', '/hc', '/thc', '/sw', '/aw', '/rw')
+COMMAND_PREFIXES = ('/c', '/hc', '/thc', '/sw', '/aw', '/rw', '/help')
 sql_statements = sql.SqlStatements()
 
 # Logging setup
@@ -39,7 +38,8 @@ bot_logger.info('bot_config loaded')
 
 @client.event
 async def on_ready():
-    """Handle the event when the bot is ready.
+    """
+    Handle the event when the bot is ready.
 
     This function logs in, sets up the database, adds words to the database,
     retrieves server member IDs and adds them to the database, and adds an admin user.
@@ -63,14 +63,11 @@ async def on_ready():
 
 
 @client.event
-async def on_member_join(member: discord.Message):
-    """Handle the event when a new member joins the server.
+async def on_member_join(member: discord.Member):
+    """
+    Handle the event when a new member joins the server.
 
-    This function adds the newly joined member to the database, creates an embed to welcome the new user,
-    and sends the embed to the designated channel.
-
-    Parameters:
-        member (discord.Member): The member who joined the server.
+    :param member: The member who joined the server.
     """
     bot_logger.debug(f'{member} joined')
 
@@ -96,13 +93,10 @@ async def on_member_join(member: discord.Message):
 
 @client.event
 async def on_message(message: discord.Message):
-    """Handle the event when a message is received.
+    """
+    Handle the event when a message is received.
 
-    This function processes all received messages, checks if they contain specific words,
-    and performs corresponding actions such as updating word counts or handling commands.
-
-    Parameters:
-        message (discord.Message): The message received by the bot.
+    :param message: The message received by the bot.
     """
     logging.debug('message from user or bot')
     if message.author == client.user:
@@ -124,14 +118,11 @@ async def on_message(message: discord.Message):
 
 
 async def handle_command(message: discord.Message, prefix: str):
-    """Handle all prefix commands.
+    """
+    Handle all prefix commands.
 
-    This function handles different commands based on the provided prefix.
-    It then calls the corresponding command handler function.
-
-    Parameters:
-        message (discord.Message): The message containing the command.
-        prefix (str): The command prefix used to trigger the command.
+    :param message: The message containing the command.
+    :param prefix: The command prefix used to trigger the command.
     """
     match prefix:
         case '/c':
@@ -152,16 +143,16 @@ async def handle_command(message: discord.Message, prefix: str):
         case '/rw':
             await handle_remove_word_command(message)
             return
+        case '/help':
+            await handle_help_command(message)
+            return
 
 
 async def handle_count_command(message: discord.Message):
-    """Handle the command to get the count of a specific word said by a user.
+    """
+    Handle the command to get the count of a specific word said by a user.
 
-    This function retrieves the count of a specific word said by a user,
-    creates an embed to display the count, and sends it to the channel.
-
-    Parameters:
-        message (discord.Message): The message containing the command.
+    :param message: The message containing the command.
     """
     bot_logger.debug('Get count of user with word')
 
@@ -207,13 +198,10 @@ async def handle_count_command(message: discord.Message):
 
 
 async def handle_highest_count_command(message: discord.Message):
-    """Handle the command to get the highest count of a specific word from all users.
+    """
+    Handle the command to get the highest count of a specific word from all users.
 
-    This function retrieves the highest count of a specific word from all users,
-    creates an embed to display the highest count, and sends it to the channel.
-
-    Parameters:
-        message (discord.Message): The message containing the command.
+    :param message: The message containing the command.
     """
     bot_logger.debug('Get highest count of user from word')
     word = message.content.lower().split(' ')[1]
@@ -249,13 +237,10 @@ async def handle_highest_count_command(message: discord.Message):
 
 
 async def handle_total_highest_count_command(message: discord.Message):
-    """Handle the command to get the user with the highest count of all words.
+    """
+    Handle the command to get the user with the highest count of all words.
 
-    This function retrieves the user with the highest count of all words,
-    creates an embed to display the user with the highest count, and sends it to the channel.
-
-    Parameters:
-        message (discord.Message): The message containing the command.
+    :param message: The message containing the command.
     """
     bot_logger.debug('Get user with highest amount of all words')
     total_highest_count = sql_statements.get_total_highest_count_column()
@@ -291,13 +276,10 @@ async def handle_total_highest_count_command(message: discord.Message):
 
 
 async def handle_show_words_command(message: discord.Message):
-    """Handle the command to show all words from the database.
+    """
+    Handle the command to show all words from the database.
 
-    This function retrieves all words from the database, creates an embed to display them,
-    and sends the embed to the channel.
-
-    Parameters:
-        message (discord.Message): The message containing the command.
+    :param message: The message containing the command.
     """
     bot_logger.debug('Show all words from database')
     words_database = sql_statements.get_words()
@@ -316,13 +298,10 @@ async def handle_show_words_command(message: discord.Message):
 
 
 async def handle_add_word_command(message: discord.Message):
-    """Handle the command to add a word to the database.
+    """
+    Handle the command to add a word to the database.
 
-    This function retrieves the word from the command message, adds it to the database,
-    creates an embed to confirm the addition, and sends it to the channel.
-
-    Parameters:
-        message (discord.Message): The message containing the command + word.
+    :param message: The message containing the command and word.
     """
     bot_logger.debug('Add word to database')
 
@@ -350,13 +329,10 @@ async def handle_add_word_command(message: discord.Message):
 
 
 async def handle_remove_word_command(message: discord.Message):
-    """Handle the command to remove a word from the database.
+    """
+    Handle the command to remove a word from the database.
 
-    This function removes a word from the database if the user has admin permission,
-    otherwise, it sends a message indicating the lack of permission.
-
-    Parameters:
-        message (discord.Message): The message containing the command.
+    :param message: The message containing the command.
     """
     bot_logger.debug('Removing word from database')
 
@@ -384,15 +360,11 @@ async def handle_remove_word_command(message: discord.Message):
 
 
 async def handle_word_count(message: discord.Message, word: str):
-    """Handle word count in a message.
+    """
+    Handle word count in a message.
 
-    This function counts the occurrences of a specific word in a message,
-    updates the count in the database, and sends a message indicating the first occurrence
-    of the word by the user, if applicable.
-
-    Parameters:
-        message (discord.Message): The message containing the word.
-        word (str): The word to count in the message.
+    :param message: The message containing the word.
+    :param word: The word to count in the message.
     """
     bot_logger.debug(f'Word: {word} found in message')
     word_count = message.content.lower().count(word)
@@ -420,10 +392,10 @@ async def handle_word_count(message: discord.Message, word: str):
 
 
 async def permission_abuse(message: discord.Message):
-    """Send mod abuse message
+    """
+    Send mod abuse message.
 
-        Parameters:
-            message (discord.Message): Message needed for sending mod message.
+    :param message: Message needed for sending mod message.
     """
     bot_logger.debug('Permission abuse')
     mod_abuse_embed = embed.Embed(
@@ -435,5 +407,32 @@ async def permission_abuse(message: discord.Message):
     )
     await message.channel.send(embed=mod_abuse_embed)
     bot_logger.info('Message for mod abuser sent')
+
+async def handle_help_command(message: discord.Message):
+    """
+    Handle the /help command. Sends a message with instructions on how to use the bot.
+
+    :param message: The message object containing the command.
+    """
+    bot_logger.debug('Handling help command')
+    help_embed = embed.Embed(
+        client.user.avatar,
+        title='Word Counter Bot Help'
+    ).add_description(
+        """Here are the available commands:
+        
+        /c [word] [user]: Count occurrences of a word for a specific user.
+        /hc [word]: Retrieve the highest count of a word.
+        /thc: Retrieve the total highest count of all words.
+        /sw: Show all tracked words.
+        /aw [word]: Add word to database (admin-only).
+        /rw [word]: Remove a word from database (admin-only).
+        """
+    ).add_footer(
+        "Use these commands wisely!"
+    )
+    
+    await message.channel.send(embed=help_embed)
+    bot_logger.info('Help message sent')
 
 client.run(token, log_handler=None)
