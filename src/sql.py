@@ -1,6 +1,7 @@
 import logging
 import sqlite3
 from typing import Optional, List, Tuple, Dict, Any
+from config import DB_PATH
 
 
 class SqlStatements:
@@ -14,7 +15,7 @@ class SqlStatements:
     # sqlite connection
     try:
         _sql_logger.debug('Setting up sql connection')
-        _sqlite_connection = sqlite3.connect('word_counter.db')
+        _sqlite_connection = sqlite3.connect(DB_PATH)
         cursor = _sqlite_connection.cursor()
         _sql_logger.info('Setup of sql connection complete')
     except sqlite3.Error as error:
