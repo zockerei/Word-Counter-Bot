@@ -1,9 +1,7 @@
-.idea/
 __pycache__/
-logger.log
-sqlite3.exe
-bot_config.yaml
-word_counter.db
+.idea/
 build/
+logger.log
+db/
 main.spec
-config.txt
+config/config.txt

@@ -1,0 +1,26 @@
+[2024-10-09 17:35:20] [INFO    ] bot.unittest: Logging config complete
+[2024-10-09 17:35:20] [INFO    ] bot.unittest: add_admin method tested successfully
+[2024-10-09 17:35:20] [INFO    ] bot.sql: Dropped all tables
+[2024-10-09 17:35:20] [INFO    ] bot.sql: Dropped all tables
+[2024-10-09 17:35:20] [INFO    ] bot.unittest: add_guild_members method tested successfully
+[2024-10-09 17:35:20] [INFO    ] bot.sql: Dropped all tables
+[2024-10-09 17:35:20] [INFO    ] bot.unittest: add_words method tested successfully
+[2024-10-09 17:35:20] [INFO    ] bot.sql: Dropped all tables
+[2024-10-09 17:35:20] [INFO    ] bot.unittest: User table created successfully
+[2024-10-09 17:35:20] [INFO    ] bot.unittest: 'user' table columns validated
+[2024-10-09 17:35:20] [INFO    ] bot.unittest: Word table created successfully
+[2024-10-09 17:35:20] [INFO    ] bot.unittest: 'word' table columns validated
+[2024-10-09 17:35:20] [INFO    ] bot.unittest: User_has_word table created successfully
+[2024-10-09 17:35:20] [INFO    ] bot.unittest: 'user_has_word' table columns validated
+[2024-10-09 17:35:20] [INFO    ] bot.unittest: Foreign key constraints validated
+[2024-10-09 17:35:20] [INFO    ] bot.sql: Dropped all tables
+[2024-10-09 17:35:20] [INFO    ] bot.unittest: get_all_users method tested successfully
+[2024-10-09 17:35:20] [INFO    ] bot.sql: Dropped all tables
+[2024-10-09 17:35:20] [INFO    ] bot.unittest: get_count method tested successfully
+[2024-10-09 17:35:20] [INFO    ] bot.sql: Dropped all tables
+[2024-10-09 17:35:20] [INFO    ] bot.sql: Dropped all tables
+[2024-10-09 17:35:20] [INFO    ] bot.unittest: get_words method tested successfully
+[2024-10-09 17:35:20] [INFO    ] bot.sql: Dropped all tables
+[2024-10-09 17:35:20] [INFO    ] bot.unittest: remove_word method tested successfully
+[2024-10-09 17:35:21] [INFO    ] bot.sql: Dropped all tables
+[2024-10-09 17:35:21] [INFO    ] bot.sql: Dropped all tables

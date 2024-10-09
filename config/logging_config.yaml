@@ -1,0 +1,47 @@
+version: 1
+disable_existing_loggers: False
+
+formatters:
+  basic:
+    format: '[{asctime}] [{levelname:<8}] {name}: {message}'
+    datefmt: '%Y-%m-%d %H:%M:%S'
+    style: '{'
+
+handlers:
+  file:
+    class: logging.FileHandler
+    formatter: basic
+    filename: logger.log
+    encoding: utf-8
+    mode: w
+
+  console:
+    class: logging.StreamHandler
+    formatter: basic
+    stream: ext://sys.stdout
+
+loggers:
+  discord:
+    level: INFO
+    handlers: [file, console]
+    propagate: no
+
+  bot.main:
+    level: INFO
+    handlers: [file, console]
+    propagate: no
+
+  bot.sql:
+    level: INFO
+    handlers: [file, console]
+    propagate: no
+
+  bot.embed:
+    level: INFO
+    handlers: [file, console]
+    propagate: no
+
+  bot.unittest:
+    level: INFO
+    handlers: [file, console]
+    propagate: no
