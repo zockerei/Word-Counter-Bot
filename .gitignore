@@ -1,7 +1,7 @@
 __pycache__/
 .idea/
 build/
-logger.log
+bot.log
 db/
 main.spec
 config/config.txt
