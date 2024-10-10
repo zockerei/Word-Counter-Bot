@@ -6,6 +6,9 @@ import yaml
 from config import LOGGING_CONFIG_PATH, BOT_CONFIG_PATH, LOG_FILE_PATH
 import sql
 import embed
+from collections import defaultdict
+from discord.utils import utcnow
+from datetime import timedelta
 
 # Logging setup
 with open(LOGGING_CONFIG_PATH, 'r') as config_file:
@@ -58,15 +61,193 @@ class MyClient(discord.Client):
         await self.tree.sync(guild=guild)
         bot_logger.info('Command tree synced with specific guild')
 
+    async def scan_server_history(self):
+        """
+        Scan the server's message history for words in the database.
+        Update the counts if higher than what's stored in the database.
+        """
+        bot_logger.info("Starting server history scan")
+        guild = self.get_guild(server_id)
+        words = sql_statements.get_words()
+        
+        total_messages = 0
+        total_channels = len(guild.text_channels)
+        word_counts = defaultdict(lambda: defaultdict(int))
+        
+        for channel_index, channel in enumerate(guild.text_channels, 1):
+            try:
+                channel_messages = await self.scan_channel(channel, words, word_counts)
+                total_messages += channel_messages
+                bot_logger.debug(f"Completed channel {channel.name} ({channel_index}/{total_channels}): {channel_messages} messages")
+                
+                # Scan threads in the channel
+                threads = []
+                async for thread in channel.archived_threads():
+                    threads.append(thread)
+                threads.extend(channel.threads)
+                
+                for thread_index, thread in enumerate(threads, 1):
+                    thread_messages = await self.scan_channel(thread, words, word_counts)
+                    total_messages += thread_messages
+                    bot_logger.debug(f"Completed thread {thread.name} in {channel.name} ({thread_index}/{len(threads)}): {thread_messages} messages")
+            except discord.errors.Forbidden:
+                bot_logger.warning(f"No access to channel {channel.name}")
+
+        # Update database with accumulated counts
+        for user_id, user_words in word_counts.items():
+            for word, count in user_words.items():
+                current_count = sql_statements.get_count(user_id, word) or 0
+                if count > current_count:
+                    sql_statements.update_user_count(user_id, word, count)
+                    bot_logger.debug(f"Updated count for user {user_id}, word '{word}': {current_count} -> {count}")
+
+        bot_logger.info(f"Server history scan completed. Total messages processed: {total_messages}")
+
+    async def scan_channel(self, channel, words, word_counts):
+        """
+        Scan a single channel or thread for messages.
+        """
+        message_count = 0
+        last_message_id = None
+        
+        while True:
+            try:
+                messages = []
+                async for message in channel.history(limit=100, before=last_message_id and discord.Object(id=last_message_id)):
+                    messages.append(message)
+                    self.process_message_history(message, words, word_counts)
+                    message_count += 1
+
+                if not messages:
+                    break
+                
+                last_message_id = messages[-1].id
+                
+                bot_logger.debug(f"Processed {message_count} messages in {channel.name}")
+            except discord.errors.HTTPException as e:
+                bot_logger.error(f"Error fetching messages from {channel.name}: {e}")
+                break
+
+        return message_count
+
+    async def scan_user_history(self, user_id):
+        """
+        Scan the server's message history for a specific user.
+        """
+        bot_logger.info(f"Starting history scan for user {user_id}")
+        guild = self.get_guild(server_id)
+        words = sql_statements.get_words()
+        word_counts = defaultdict(int)
+        
+        total_messages = 0
+        total_channels = len(guild.text_channels)
+        
+        for channel_index, channel in enumerate(guild.text_channels, 1):
+            try:
+                channel_messages = 0
+                async for message in channel.history(limit=None):
+                    if message.author.id == user_id:
+                        self.process_message_history(message, words, {user_id: word_counts})
+                        channel_messages += 1
+                        total_messages += 1
+                
+                bot_logger.debug(f"Processed {channel_messages} messages from user {user_id} in channel {channel.name} ({channel_index}/{total_channels})")
+                
+                # Scan threads in the channel
+                threads = []
+                async for thread in channel.archived_threads():
+                    threads.append(thread)
+                threads.extend(channel.threads)
+                
+                for thread_index, thread in enumerate(threads, 1):
+                    thread_messages = 0
+                    async for message in thread.history(limit=None):
+                        if message.author.id == user_id:
+                            self.process_message_history(message, words, {user_id: word_counts})
+                            thread_messages += 1
+                            total_messages += 1
+                    
+                    bot_logger.debug(f"Processed {thread_messages} messages from user {user_id} in thread {thread.name} ({thread_index}/{len(threads)}) of channel {channel.name}")
+            except discord.errors.Forbidden:
+                bot_logger.warning(f"No access to channel {channel.name}")
+
+        # Update database with accumulated counts
+        for word, count in word_counts.items():
+            current_count = sql_statements.get_count(user_id, word) or 0
+            if count > current_count:
+                sql_statements.update_user_count(user_id, word, count)
+                bot_logger.debug(f"Updated count for user {user_id}, word '{word}': {current_count} -> {count}")
+
+        bot_logger.info(f"User history scan completed for user {user_id}. Total messages processed: {total_messages}")
+
+    async def scan_for_new_word(self, new_word):
+        """
+        Scan the server's message history for a newly added word.
+        """
+        bot_logger.info(f"Starting server scan for new word '{new_word}'")
+        guild = self.get_guild(server_id)
+        word_counts = defaultdict(int)
+        
+        total_messages = 0
+        total_channels = len(guild.text_channels)
+        
+        for channel_index, channel in enumerate(guild.text_channels, 1):
+            try:
+                channel_messages = 0
+                async for message in channel.history(limit=None):
+                    if new_word.lower() in message.content.lower():
+                        count = message.content.lower().count(new_word.lower())
+                        word_counts[message.author.id] += count
+                        channel_messages += 1
+                        total_messages += 1
+                
+                bot_logger.debug(f"Processed {channel_messages} messages in channel {channel.name} ({channel_index}/{total_channels}) for new word '{new_word}'")
+                
+                # Scan threads in the channel
+                threads = []
+                async for thread in channel.archived_threads():
+                    threads.append(thread)
+                threads.extend(channel.threads)
+                
+                for thread_index, thread in enumerate(threads, 1):
+                    thread_messages = 0
+                    async for message in thread.history(limit=None):
+                        if new_word.lower() in message.content.lower():
+                            count = message.content.lower().count(new_word.lower())
+                            word_counts[message.author.id] += count
+                            thread_messages += 1
+                            total_messages += 1
+                    
+                    bot_logger.debug(f"Processed {thread_messages} messages in thread {thread.name} ({thread_index}/{len(threads)}) of channel {channel.name} for new word '{new_word}'")
+            except discord.errors.Forbidden:
+                bot_logger.warning(f"No access to channel {channel.name}")
+
+        # Update database with accumulated counts, only if the new count is higher
+        for user_id, count in word_counts.items():
+            current_count = sql_statements.get_count(user_id, new_word) or 0
+            if count > current_count:
+                sql_statements.update_user_count(user_id, new_word, count)
+                bot_logger.debug(f"Updated count for user {user_id}, new word '{new_word}': {current_count} -> {count}")
+            else:
+                bot_logger.debug(f"No update needed for user {user_id}, new word '{new_word}': current count {current_count} >= new count {count}")
+
+        bot_logger.info(f"Server scan completed for new word '{new_word}'. Total messages processed: {total_messages}")
+
+    def process_message_history(self, message, words, word_counts):
+        """
+        Process a single message from the history.
+        """
+        for word in words:
+            if word.lower() in message.content.lower():
+                count = message.content.lower().count(word.lower())
+                word_counts[message.author.id][word] += count
+
 client = MyClient()
 
 @client.event
 async def on_ready():
     """
     Handle the event when the bot is ready.
-
-    This function logs in, sets up the database, adds words to the database,
-    retrieves server member IDs and adds them to the database, and adds admin users.
     """
     bot_logger.info(f'Logged in as {client.user}')
 
@@ -83,6 +264,10 @@ async def on_ready():
 
     # add admin user
     sql_statements.add_admins(*admin_ids)
+
+    # Scan server history
+    await client.scan_server_history()
+
     bot_logger.info('Bot ready')
 
 @client.event
@@ -98,6 +283,9 @@ async def on_member_join(member: discord.Member):
     # create new user in database
     sql_statements.add_user_ids(member.id)
 
+    # Scan user's history
+    await client.scan_user_history(member.id)
+
     # create embed for new user
     username = member.display_name 
     new_user_embed = embed.Embed(
@@ -105,9 +293,9 @@ async def on_member_join(member: discord.Member):
         title='A new victim'
     ).add_description(
         f"""A new victim joined the Server\n
-        Be aware of what you type {username}... :flushed:"""
+        Be aware of what you type {username}... 😳"""
     ).add_footer(
-        f'{sql_statements.get_words()}'
+        ', '.join(sql_statements.get_words())
     )
 
     # send embed to the designated channel
@@ -127,8 +315,9 @@ async def on_message(message: discord.Message):
         return
 
     current_words = sql_statements.get_words()
+    words_in_message = message.content.lower().split()
     for word in current_words:
-        if word.lower() in message.content.lower():
+        if word.lower() in words_in_message:
             await handle_word_count(message, word)
             bot_logger.debug(f'Word "{word}" found in message')
         else:
@@ -175,6 +364,8 @@ async def count(interaction: discord.Interaction, word: str, user: discord.Membe
     count_embed.add_footer(
         f'The person who has said {word} the most is '
         f'{highest_count_user} with {highest_count_tuple[2]} times'
+    ).add_footer(
+        f'Imagine 🐕 💦'
     )
     await interaction.followup.send(embed=count_embed)
     bot_logger.debug('Count message sent')
@@ -210,7 +401,7 @@ async def highest_count(interaction: discord.Interaction, word: str):
     )
     username = client.get_user(highest_count_tuple[0]).display_name 
     highest_count_embed.add_description(
-        f"""The user who has said {word} the most is ||{username}||\n
+        f"""The user who has said {word} the most is {username}\n
         With an impressive amount of {highest_count_tuple[2]} times"""
     )
     await interaction.followup.send(embed=highest_count_embed)
@@ -244,10 +435,10 @@ async def total_highest_count(interaction: discord.Interaction):
         client.user.avatar,
         title=f'Highest count of all words'
     ).add_description(
-        f"""The winner for the Highest count of all words is... ||{username}!||\n
+        f"""The winner for the Highest count of all words is... {username}!\n
         Who has said {total_highest_count[1]} {total_highest_count[2]} times"""
     ).add_footer(
-        f'Imagine'
+        f'Imagine 🗿'
     )
     await interaction.followup.send(embed=thc_embed)
     bot_logger.info('Message for total highest count sent')
@@ -289,6 +480,9 @@ async def add_word(interaction: discord.Interaction, word: str):
 
     if sql_statements.check_user_is_admin(interaction.user.id):
         sql_statements.add_words(word)
+
+        # Scan server for new word
+        await client.scan_for_new_word(word)
 
         add_word_embed = embed.Embed(
             client.user.avatar,
@@ -346,12 +540,12 @@ async def help_command(interaction: discord.Interaction):
     ).add_description(
         """Here are the available commands:
         
-        /count [word] [user]: Count occurrences of a word for a specific user.
-        /highest_count [word]: Retrieve the highest count of a word.
-        /total_highest_count: Retrieve the total highest count of all words.
-        /show_words: Show all tracked words.
-        /add_word [word]: Add word to database (admin-only).
-        /remove_word [word]: Remove a word from database (admin-only).
+        /c [word] [user]: Count occurrences of a word for a specific user.
+        /hc [word]: Retrieve the highest count of a word.
+        /thc: Retrieve the total highest count of all words.
+        /sw: Show all tracked words.
+        /aw [word]: Add word to database (admin-only).
+        /rw [word]: Remove a word from database (admin-only).
         """
     ).add_footer(
         "Use these commands wisely!"
@@ -372,7 +566,7 @@ async def handle_word_count(message: discord.Message, word: str):
         word (str): The word to count in the message.
     """
     bot_logger.debug(f'Word: {word} found in message')
-    word_count = message.content.lower().count(word)
+    word_count = message.content.lower().split().count(word.lower())
     user_id = message.author.id
 
     if sql_statements.get_count(user_id, word) is None:
@@ -383,10 +577,10 @@ async def handle_word_count(message: discord.Message, word: str):
 
         first_time_embed = embed.Embed(
             client.user.avatar,
-            title=f'First time :smirk:'
+            title=f'First time 😩'
         ).add_description(
             f"""{username} was a naughty boy and said {word}\n
-            His first time... :sweat_drops:"""
+            His first time... 💦"""
         )
         await message.channel.send(embed=first_time_embed)
         bot_logger.info(f'First time message sent: {username}, {word}')
