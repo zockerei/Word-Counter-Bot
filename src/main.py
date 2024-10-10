@@ -24,6 +24,7 @@ sql_statements = sql.SqlStatements()
 intents = discord.Intents.default()
 intents.message_content = True
 intents.members = True
+bot_logger.debug(f'Intents setup complete: {intents}')
 
 # Load bot configuration
 with open(BOT_CONFIG_PATH, 'r') as config_file:
@@ -51,10 +52,11 @@ class MyClient(discord.Client):
         self.tree = app_commands.CommandTree(self)
 
     async def setup_hook(self):
-        """
-        Set up the bot by syncing the command tree with the specified guild.
-        """
-        await self.tree.sync(guild=discord.Object(id=server_id))
+        # Sync commands with a specific guild (server)
+        guild = discord.Object(id=server_id)
+        self.tree.copy_global_to(guild=guild)
+        await self.tree.sync(guild=guild)
+        bot_logger.info('Command tree synced with specific guild')
 
 client = MyClient()
 
@@ -111,6 +113,26 @@ async def on_member_join(member: discord.Member):
     # send embed to the designated channel
     await client.get_channel(channel_id).send(embed=new_user_embed)
     bot_logger.info('New user message sent')
+
+@client.event
+async def on_message(message: discord.Message):
+    """
+    Handles the event when a message is received.
+
+    Args:
+        message (discord.Message): The message received by the bot.
+    """
+    bot_logger.debug('Message received')
+    if message.author == client.user:
+        return
+
+    current_words = sql_statements.get_words()
+    for word in current_words:
+        if word.lower() in message.content.lower():
+            await handle_word_count(message, word)
+            bot_logger.debug(f'Word "{word}" found in message')
+        else:
+            bot_logger.debug(f'Word "{word}" not found in message')
 
 @client.tree.command(name="c", description="Count occurrences of a word for a specific user")
 @app_commands.describe(word="The word to count", user="The user to check")
@@ -252,7 +274,7 @@ async def show_words(interaction: discord.Interaction):
     await interaction.followup.send(embed=words_embed)
     bot_logger.info('Message for all words sent')
 
-@client.tree.command(name="add_word", description="Add word to database (admin-only)")
+@client.tree.command(name="aw", description="Add word to database (admin-only)")
 @app_commands.describe(word="The word to add")
 async def add_word(interaction: discord.Interaction, word: str):
     """
@@ -308,7 +330,7 @@ async def remove_word(interaction: discord.Interaction, word: str):
     else:
         await permission_abuse(interaction)
 
-@client.tree.command(name="help", description="Show bot usage instructions")
+@client.tree.command(name="h", description="Show bot usage instructions")
 async def help_command(interaction: discord.Interaction):
     """
     Show bot usage instructions.
