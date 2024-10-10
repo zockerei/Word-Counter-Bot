@@ -1,12 +1,11 @@
-# Requirements: python 3.11
+# Tested with python 3.11
 import discord
+from discord import app_commands
 import logging.config
 import yaml
 from config import LOGGING_CONFIG_PATH, BOT_CONFIG_PATH, LOG_FILE_PATH
 import sql
 import embed
-
-COMMAND_PREFIXES = ('/c', '/hc', '/thc', '/sw', '/aw', '/rw', '/help')
 
 # Logging setup
 with open(LOGGING_CONFIG_PATH, 'r') as config_file:
@@ -25,7 +24,6 @@ sql_statements = sql.SqlStatements()
 intents = discord.Intents.default()
 intents.message_content = True
 intents.members = True
-client = discord.Client(intents=intents)
 
 # Load bot configuration
 with open(BOT_CONFIG_PATH, 'r') as config_file:
@@ -40,13 +38,33 @@ with open(BOT_CONFIG_PATH, 'r') as config_file:
 bot_logger.debug(f'{token} | {words} | {server_id} | {channel_id} | {admin_ids}')
 bot_logger.info('bot_config loaded')
 
+class MyClient(discord.Client):
+    """
+    Custom Discord client class that sets up the command tree.
+    """
+
+    def __init__(self):
+        """
+        Initialize the custom client with intents and command tree.
+        """
+        super().__init__(intents=intents)
+        self.tree = app_commands.CommandTree(self)
+
+    async def setup_hook(self):
+        """
+        Set up the bot by syncing the command tree with the specified guild.
+        """
+        await self.tree.sync(guild=discord.Object(id=server_id))
+
+client = MyClient()
 
 @client.event
 async def on_ready():
-    """Handles the event when the bot is ready.
+    """
+    Handle the event when the bot is ready.
 
     This function logs in, sets up the database, adds words to the database,
-    retrieves server member IDs and adds them to the database, and adds an admin user.
+    retrieves server member IDs and adds them to the database, and adds admin users.
     """
     bot_logger.info(f'Logged in as {client.user}')
 
@@ -65,10 +83,10 @@ async def on_ready():
     sql_statements.add_admins(*admin_ids)
     bot_logger.info('Bot ready')
 
-
 @client.event
 async def on_member_join(member: discord.Member):
-    """Handles the event when a new member joins the server.
+    """
+    Handle the event when a new member joins the server.
 
     Args:
         member (discord.Member): The member who joined the server.
@@ -94,91 +112,25 @@ async def on_member_join(member: discord.Member):
     await client.get_channel(channel_id).send(embed=new_user_embed)
     bot_logger.info('New user message sent')
 
-
-@client.event
-async def on_message(message: discord.Message):
-    """Handles the event when a message is received.
+@client.tree.command(name="c", description="Count occurrences of a word for a specific user")
+@app_commands.describe(word="The word to count", user="The user to check")
+async def count(interaction: discord.Interaction, word: str, user: discord.Member):
+    """
+    Count occurrences of a word for a specific user.
 
     Args:
-        message (discord.Message): The message received by the bot.
+        interaction (discord.Interaction): The interaction object.
+        word (str): The word to count.
+        user (discord.Member): The user to check.
     """
-    logging.debug('message from user or bot')
-    if message.author == client.user:
-        return  # Ignore messages from the bot
-
-    for prefix in COMMAND_PREFIXES:
-        if message.content.startswith(prefix):
-            await handle_command(message, prefix)
-            return
-        else:
-            bot_logger.debug(f'{prefix} not found in message')
-
-    current_words = sql_statements.get_words()
-    for word in current_words:
-        if word in message.content.lower():
-            await handle_word_count(message, word)
-        else:
-            bot_logger.debug(f'{word} not found in message')
-
-
-async def handle_command(message: discord.Message, prefix: str):
-    """Handle all prefix commands.
-
-    Args:
-        message (discord.Message): The message containing the command.
-        prefix (str): The command prefix used to trigger the command.
-    """
-    match prefix:
-        case '/c':
-            await handle_count_command(message)
-            return
-        case '/hc':
-            await handle_highest_count_command(message)
-            return
-        case '/thc':
-            await handle_total_highest_count_command(message)
-            return
-        case '/sw':
-            await handle_show_words_command(message)
-            return
-        case '/aw':
-            await handle_add_word_command(message)
-            return
-        case '/rw':
-            await handle_remove_word_command(message)
-            return
-        case '/help':
-            await handle_help_command(message)
-            return
-
-
-async def handle_count_command(message: discord.Message):
-    """Handles the command to get the count of a specific word said by a user.
-
-    Args:
-        message (discord.Message): The message containing the command.
-    """
+    await interaction.response.defer()
     bot_logger.debug('Get count of user with word')
 
-    # split message
-    _, word, user_id = message.content.lower().split(' ')
-    converted_user_id = user_id.replace('<', '').replace('>', '').replace('@', '')
-
-    try:
-        # Convert the user ID to an integer
-        converted_user_id = int(converted_user_id)
-    except ValueError:
-        bot_logger.error(f"Invalid user ID: {converted_user_id}")
-        await message.channel.send("Invalid user ID. Please use a valid user mention or ID.")
-        return
-
-    # convert and get username
+    converted_user_id = user.id
     count_user_id = sql_statements.get_count(converted_user_id, word)
-    username = client.get_user(converted_user_id).display_name 
+    username = user.display_name 
 
     if count_user_id is None:
-        # create embed for 0 count user
-        bot_logger.debug(f'Creating embed for zero count for username: {username}')
         zero_count_embed = embed.Embed(
             client.user.avatar,
             title=f'{username} is clean'
@@ -186,11 +138,9 @@ async def handle_count_command(message: discord.Message):
             f"""{username} has said {word} 0 times\n
             (Or he tricked the system)"""
         )
-        await message.channel.send(embed=zero_count_embed)
+        await interaction.followup.send(embed=zero_count_embed)
         return
 
-    # send message with count
-    bot_logger.debug('Creating count embed')
     count_embed = embed.Embed(
         client.user.avatar,
         title=f'Count from {username}'
@@ -198,42 +148,40 @@ async def handle_count_command(message: discord.Message):
         f'{username} has said {word} {count_user_id} times'
     )
 
-    # set footer
     highest_count_tuple = sql_statements.get_highest_count_column(word)
     highest_count_user = client.get_user(highest_count_tuple[0]).display_name 
     count_embed.add_footer(
         f'The person who has said {word} the most is '
         f'{highest_count_user} with {highest_count_tuple[2]} times'
     )
-    await message.channel.send(embed=count_embed)
+    await interaction.followup.send(embed=count_embed)
     bot_logger.debug('Count message sent')
 
-
-async def handle_highest_count_command(message: discord.Message):
-    """Handles the command to get the highest count of a specific word from all users.
+@client.tree.command(name="hc", description="Retrieve the highest count of a word")
+@app_commands.describe(word="The word to check")
+async def highest_count(interaction: discord.Interaction, word: str):
+    """
+    Retrieve the highest count of a word across all users.
 
     Args:
-        message (discord.Message): The message containing the command.
+        interaction (discord.Interaction): The interaction object.
+        word (str): The word to check.
     """
+    await interaction.response.defer()
     bot_logger.debug('Get highest count of user from word')
-    word = message.content.lower().split(' ')[1]
     highest_count_tuple = sql_statements.get_highest_count_column(word)
 
     if highest_count_tuple is None:
-        # make embed when no user has said the word
-        bot_logger.debug(f'Creating embed. No User has said the word: {word}')
         no_count_embed = embed.Embed(
             client.user.avatar,
             title=f'Dead Server'
-        )
-        no_count_embed.add_description(
+        ).add_description(
             f"""No User in this Server has said {word}\n
             Or the word is not being monitored :eyes:"""
         )
-        await message.channel.send(embed=no_count_embed)
+        await interaction.followup.send(embed=no_count_embed)
         return
 
-    # make embed
     highest_count_embed = embed.Embed(
         client.user.avatar,
         title=f'Highest count from all Users'
@@ -243,23 +191,22 @@ async def handle_highest_count_command(message: discord.Message):
         f"""The user who has said {word} the most is ||{username}||\n
         With an impressive amount of {highest_count_tuple[2]} times"""
     )
-    await message.channel.send(embed=highest_count_embed)
+    await interaction.followup.send(embed=highest_count_embed)
     bot_logger.info('Highest count message sent')
-    return
 
-
-async def handle_total_highest_count_command(message: discord.Message):
-    """Handles the command to get the user with the highest count of all words.
+@client.tree.command(name="thc", description="Retrieve the total highest count of all words")
+async def total_highest_count(interaction: discord.Interaction):
+    """
+    Retrieve the total highest count of all words across all users.
 
     Args:
-        message (discord.Message): The message containing the command.
+        interaction (discord.Interaction): The interaction object.
     """
+    await interaction.response.defer()
     bot_logger.debug('Get user with highest amount of all words')
     total_highest_count = sql_statements.get_total_highest_count_column()
 
     if total_highest_count is None:
-        # make embed when no user has said the word
-        bot_logger.debug(f'Creating embed. No User has said any word')
         no_count_embed = embed.Embed(
             client.user.avatar,
             title=f'Dead Server'
@@ -267,11 +214,9 @@ async def handle_total_highest_count_command(message: discord.Message):
             f"""No User in this Server has said any word...\n
             Or they tricked the system (not hard)"""
         )
-        await message.channel.send(embed=no_count_embed)
+        await interaction.followup.send(embed=no_count_embed)
         return
 
-    # make embed
-    bot_logger.debug('Making thc_embed')
     username = client.get_user(total_highest_count[0]).display_name 
     thc_embed = embed.Embed(
         client.user.avatar,
@@ -282,21 +227,21 @@ async def handle_total_highest_count_command(message: discord.Message):
     ).add_footer(
         f'Imagine'
     )
-    await message.channel.send(embed=thc_embed)
+    await interaction.followup.send(embed=thc_embed)
     bot_logger.info('Message for total highest count sent')
-    return
 
-
-async def handle_show_words_command(message: discord.Message):
-    """Handles the command to show all words from the database.
+@client.tree.command(name="sw", description="Show all tracked words")
+async def show_words(interaction: discord.Interaction):
+    """
+    Show all tracked words in the database.
 
     Args:
-        message (discord.Message): The message containing the command.
+        interaction (discord.Interaction): The interaction object.
     """
+    await interaction.response.defer()
     bot_logger.debug('Show all words from database')
     words_database = sql_statements.get_words()
 
-    # create embed
     words_embed = embed.Embed(
         client.user.avatar,
         title=f'All words'
@@ -304,75 +249,101 @@ async def handle_show_words_command(message: discord.Message):
         f"""Here is a list of all the words you should rather not say...\n
         {', '.join(words_database)}"""
     )
-    await message.channel.send(embed=words_embed)
+    await interaction.followup.send(embed=words_embed)
     bot_logger.info('Message for all words sent')
-    return
 
-
-async def handle_add_word_command(message: discord.Message):
-    """Handles the command to add a word to the database.
+@client.tree.command(name="add_word", description="Add word to database (admin-only)")
+@app_commands.describe(word="The word to add")
+async def add_word(interaction: discord.Interaction, word: str):
+    """
+    Add a word to the database (admin-only).
 
     Args:
-        message (discord.Message): The message containing the command and word.
+        interaction (discord.Interaction): The interaction object.
+        word (str): The word to add to the database.
     """
+    await interaction.response.defer()
     bot_logger.debug('Add word to database')
 
-    # check if user has permission
-    user_id = message.author.id
-    if sql_statements.check_user_is_admin(user_id):
-        # get word and add to database
-        word_from_message = [' '.join(message.content.lower().split(' ')[1:])]
-        sql_statements.add_words(*word_from_message)
+    if sql_statements.check_user_is_admin(interaction.user.id):
+        sql_statements.add_words(word)
 
-        # create embed for success
         add_word_embed = embed.Embed(
             client.user.avatar,
             title=f'Word added'
         ).add_description(
             f"""Word that was added to the database:
-            {', '.join(word_from_message)}"""
+            {word}"""
         )
-        await message.channel.send(embed=add_word_embed)
+        await interaction.followup.send(embed=add_word_embed)
         bot_logger.info('Message for adding word sent')
     else:
-        await permission_abuse(message)
+        await permission_abuse(interaction)
 
-    return
-
-
-async def handle_remove_word_command(message: discord.Message):
-    """Handles the command to remove a word from the database.
+@client.tree.command(name="rw", description="Remove a word from database (admin-only)")
+@app_commands.describe(word="The word to remove")
+async def remove_word(interaction: discord.Interaction, word: str):
+    """
+    Remove a word from the database (admin-only).
 
     Args:
-        message (discord.Message): The message containing the command.
+        interaction (discord.Interaction): The interaction object.
+        word (str): The word to remove from the database.
     """
+    await interaction.response.defer()
     bot_logger.debug('Removing word from database')
 
-    # check if user has permission
-    user_id = message.author.id
-    if sql_statements.check_user_is_admin(user_id):
-        # get word and remove word
-        word_from_message = ' '.join(message.content.lower().split(' ')[1:])
-        sql_statements.remove_word(word_from_message)
+    if sql_statements.check_user_is_admin(interaction.user.id):
+        sql_statements.remove_word(word)
 
-        # create embed
         remove_word_embed = embed.Embed(
             client.user.avatar,
             title=f'Removed word'
         ).add_description(
             f"""Removed word from database:
-            {word_from_message}"""
+            {word}"""
         )
-        await message.channel.send(embed=remove_word_embed)
+        await interaction.followup.send(embed=remove_word_embed)
         bot_logger.info('Message for removing word sent')
     else:
-        await permission_abuse(message)
+        await permission_abuse(interaction)
 
-    return
+@client.tree.command(name="help", description="Show bot usage instructions")
+async def help_command(interaction: discord.Interaction):
+    """
+    Show bot usage instructions.
 
+    Args:
+        interaction (discord.Interaction): The interaction object.
+    """
+    await interaction.response.defer()
+    bot_logger.debug('Handling help command')
+    help_embed = embed.Embed(
+        client.user.avatar,
+        title='Word Counter Bot Help'
+    ).add_description(
+        """Here are the available commands:
+        
+        /count [word] [user]: Count occurrences of a word for a specific user.
+        /highest_count [word]: Retrieve the highest count of a word.
+        /total_highest_count: Retrieve the total highest count of all words.
+        /show_words: Show all tracked words.
+        /add_word [word]: Add word to database (admin-only).
+        /remove_word [word]: Remove a word from database (admin-only).
+        """
+    ).add_footer(
+        "Use these commands wisely!"
+    )
+    
+    await interaction.followup.send(embed=help_embed)
+    bot_logger.info('Help message sent')
 
 async def handle_word_count(message: discord.Message, word: str):
-    """Handles word count in a message.
+    """
+    Handle word count in a message.
+
+    This function updates the count for a word said by a user and sends a notification
+    if it's the first time the user has said the word.
 
     Args:
         message (discord.Message): The message containing the word.
@@ -388,7 +359,6 @@ async def handle_word_count(message: discord.Message, word: str):
 
         username = message.author.display_name 
 
-        # Create embed
         first_time_embed = embed.Embed(
             client.user.avatar,
             title=f'First time :smirk:'
@@ -402,12 +372,12 @@ async def handle_word_count(message: discord.Message, word: str):
 
     sql_statements.update_user_count(user_id, word, word_count)
 
-
-async def permission_abuse(message: discord.Message):
-    """Sends mod abuse message.
+async def permission_abuse(interaction: discord.Interaction):
+    """
+    Send a mod abuse message when a user without permissions attempts an admin action.
 
     Args:
-        message (discord.Message): Message needed for sending mod message.
+        interaction (discord.Interaction): The interaction object.
     """
     bot_logger.debug('Permission abuse')
     admin_user = client.get_user(admin_ids[0]).display_name
@@ -415,38 +385,10 @@ async def permission_abuse(message: discord.Message):
         client.user.avatar,
         title=f'No permission'
     ).add_description(
-        f"""You have no permission to remove the word\n
+        f"""You have no permission to perform this action\n
         Call the admin: {admin_user}"""
     )
-    await message.channel.send(embed=mod_abuse_embed)
+    await interaction.followup.send(embed=mod_abuse_embed)
     bot_logger.info('Message for mod abuser sent')
-
-
-async def handle_help_command(message: discord.Message):
-    """Handles the /help command. Sends a message with instructions on how to use the bot.
-
-    Args:
-        message (discord.Message): The message object containing the command.
-    """
-    bot_logger.debug('Handling help command')
-    help_embed = embed.Embed(
-        client.user.avatar,
-        title='Word Counter Bot Help'
-    ).add_description(
-        """Here are the available commands:
-        
-        /c [word] [user]: Count occurrences of a word for a specific user.
-        /hc [word]: Retrieve the highest count of a word.
-        /thc: Retrieve the total highest count of all words.
-        /sw: Show all tracked words.
-        /aw [word]: Add word to database (admin-only).
-        /rw [word]: Remove a word from database (admin-only).
-        """
-    ).add_footer(
-        "Use these commands wisely!"
-    )
-    
-    await message.channel.send(embed=help_embed)
-    bot_logger.info('Help message sent')
 
 client.run(token, log_handler=None)
