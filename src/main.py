@@ -5,10 +5,8 @@ import logging.config
 import yaml
 from config import LOGGING_CONFIG_PATH, BOT_CONFIG_PATH, LOG_FILE_PATH
 import sql
-import embed
+from discord import Embed, Color
 from collections import defaultdict
-from discord.utils import utcnow
-from datetime import timedelta
 
 # Logging setup
 with open(LOGGING_CONFIG_PATH, 'r') as config_file:
@@ -68,7 +66,7 @@ class MyClient(discord.Client):
         """
         bot_logger.info("Starting server history scan")
         guild = self.get_guild(server_id)
-        words = sql_statements.get_words()
+        words_list = sql_statements.get_words()
         
         total_messages = 0
         total_channels = len(guild.text_channels)
@@ -76,7 +74,7 @@ class MyClient(discord.Client):
         
         for channel_index, channel in enumerate(guild.text_channels, 1):
             try:
-                channel_messages = await self.scan_channel(channel, words, word_counts)
+                channel_messages = await self.scan_channel(channel, words_list, word_counts)
                 total_messages += channel_messages
                 bot_logger.debug(f"Completed channel {channel.name} ({channel_index}/{total_channels}): {channel_messages} messages")
                 
@@ -87,7 +85,7 @@ class MyClient(discord.Client):
                 threads.extend(channel.threads)
                 
                 for thread_index, thread in enumerate(threads, 1):
-                    thread_messages = await self.scan_channel(thread, words, word_counts)
+                    thread_messages = await self.scan_channel(thread, words_list, word_counts)
                     total_messages += thread_messages
                     bot_logger.debug(f"Completed thread {thread.name} in {channel.name} ({thread_index}/{len(threads)}): {thread_messages} messages")
             except discord.errors.Forbidden:
@@ -103,7 +101,7 @@ class MyClient(discord.Client):
 
         bot_logger.info(f"Server history scan completed. Total messages processed: {total_messages}")
 
-    async def scan_channel(self, channel, words, word_counts):
+    async def scan_channel(self, channel, word_list, word_counts):
         """
         Scan a single channel or thread for messages.
         """
@@ -115,7 +113,7 @@ class MyClient(discord.Client):
                 messages = []
                 async for message in channel.history(limit=100, before=last_message_id and discord.Object(id=last_message_id)):
                     messages.append(message)
-                    self.process_message_history(message, words, word_counts)
+                    self.process_message_history(message, word_list, word_counts)
                     message_count += 1
 
                 if not messages:
@@ -136,7 +134,7 @@ class MyClient(discord.Client):
         """
         bot_logger.info(f"Starting history scan for user {user_id}")
         guild = self.get_guild(server_id)
-        words = sql_statements.get_words()
+        words_list = sql_statements.get_words()
         word_counts = defaultdict(int)
         
         total_messages = 0
@@ -147,7 +145,7 @@ class MyClient(discord.Client):
                 channel_messages = 0
                 async for message in channel.history(limit=None):
                     if message.author.id == user_id:
-                        self.process_message_history(message, words, {user_id: word_counts})
+                        self.process_message_history(message, words_list, {user_id: word_counts})
                         channel_messages += 1
                         total_messages += 1
                 
@@ -163,7 +161,7 @@ class MyClient(discord.Client):
                     thread_messages = 0
                     async for message in thread.history(limit=None):
                         if message.author.id == user_id:
-                            self.process_message_history(message, words, {user_id: word_counts})
+                            self.process_message_history(message, words_list, {user_id: word_counts})
                             thread_messages += 1
                             total_messages += 1
                     
@@ -196,8 +194,8 @@ class MyClient(discord.Client):
                 channel_messages = 0
                 async for message in channel.history(limit=None):
                     if new_word.lower() in message.content.lower():
-                        count = message.content.lower().count(new_word.lower())
-                        word_counts[message.author.id] += count
+                        word_occurrence = message.content.lower().count(new_word.lower())
+                        word_counts[message.author.id] += word_occurrence
                         channel_messages += 1
                         total_messages += 1
                 
@@ -213,8 +211,8 @@ class MyClient(discord.Client):
                     thread_messages = 0
                     async for message in thread.history(limit=None):
                         if new_word.lower() in message.content.lower():
-                            count = message.content.lower().count(new_word.lower())
-                            word_counts[message.author.id] += count
+                            word_occurrence = message.content.lower().count(new_word.lower())
+                            word_counts[message.author.id] += word_occurrence
                             thread_messages += 1
                             total_messages += 1
                     
@@ -232,15 +230,16 @@ class MyClient(discord.Client):
                 bot_logger.debug(f"No update needed for user {user_id}, new word '{new_word}': current count {current_count} >= new count {count}")
 
         bot_logger.info(f"Server scan completed for new word '{new_word}'. Total messages processed: {total_messages}")
-
-    def process_message_history(self, message, words, word_counts):
+        
+    @staticmethod
+    def process_message_history(message, word_list, word_counts):
         """
         Process a single message from the history.
         """
-        for word in words:
+        for word in word_list:
             if word.lower() in message.content.lower():
-                count = message.content.lower().count(word.lower())
-                word_counts[message.author.id][word] += count
+                word_occurrence = message.content.lower().count(word.lower())
+                word_counts[message.author.id][word] += word_occurrence
 
 client = MyClient()
 
@@ -288,14 +287,13 @@ async def on_member_join(member: discord.Member):
 
     # create embed for new user
     username = member.display_name 
-    new_user_embed = embed.Embed(
-        client.user.avatar,
-        title='A new victim'
-    ).add_description(
-        f"""A new victim joined the Server\n
-        Be aware of what you type {username}... 😳"""
-    ).add_footer(
-        ', '.join(sql_statements.get_words())
+    new_user_embed = Embed(
+        title='A new victim',
+        description=f"""A new victim joined the Server\n
+        Be aware of what you type {username}... 😳""",
+        color=Color.blue()
+    ).set_footer(
+        text=', '.join(sql_statements.get_words())
     )
 
     # send embed to the designated channel
@@ -342,31 +340,26 @@ async def count(interaction: discord.Interaction, word: str, user: discord.Membe
     username = user.display_name 
 
     if count_user_id is None:
-        zero_count_embed = embed.Embed(
-            client.user.avatar,
-            title=f'{username} is clean'
-        ).add_description(
-            f"""{username} has said {word} 0 times\n
-            (Or he tricked the system)"""
+        zero_count_embed = Embed(
+            title=f'{username} is clean',
+            description=f"""{username} has said {word} 0 times\n
+            (Or he tricked the system)""",
+            color=Color.green()
         )
         await interaction.followup.send(embed=zero_count_embed)
         return
 
-    count_embed = embed.Embed(
-        client.user.avatar,
-        title=f'Count from {username}'
-    ).add_description(
-        f'{username} has said {word} {count_user_id} times'
+    count_embed = Embed(
+        title=f'Count from {username}',
+        description=f'{username} has said {word} {count_user_id} times',
+        color=Color.blue()
     )
 
     highest_count_tuple = sql_statements.get_highest_count_column(word)
     highest_count_user = client.get_user(highest_count_tuple[0]).display_name 
-    count_embed.add_footer(
-        f'The person who has said {word} the most is '
-        f'{highest_count_user} with {highest_count_tuple[2]} times'
-    ).add_footer(
-        f'Imagine 🐕 💦'
-    )
+    count_embed.set_footer(text=f'The person who has said {word} the most is '
+                                f'{highest_count_user} with {highest_count_tuple[2]} times\n'
+                                f'Imagine 🐕 💦')
     await interaction.followup.send(embed=count_embed)
     bot_logger.debug('Count message sent')
 
@@ -385,30 +378,27 @@ async def highest_count(interaction: discord.Interaction, word: str):
     highest_count_tuple = sql_statements.get_highest_count_column(word)
 
     if highest_count_tuple is None:
-        no_count_embed = embed.Embed(
-            client.user.avatar,
-            title=f'Dead Server'
-        ).add_description(
-            f"""No User in this Server has said {word}\n
-            Or the word is not being monitored :eyes:"""
+        no_count_embed = Embed(
+            title='Dead Server',
+            description=f"""No User in this Server has said {word}\n
+            Or the word is not being monitored :eyes:""",
+            color=Color.red()
         )
         await interaction.followup.send(embed=no_count_embed)
         return
 
-    highest_count_embed = embed.Embed(
-        client.user.avatar,
-        title=f'Highest count from all Users'
-    )
-    username = client.get_user(highest_count_tuple[0]).display_name 
-    highest_count_embed.add_description(
-        f"""The user who has said {word} the most is {username}\n
-        With an impressive amount of {highest_count_tuple[2]} times"""
+    username = client.get_user(highest_count_tuple[0]).display_name
+    highest_count_embed = Embed(
+        title='Highest count from all Users',
+        description=f"""The user who has said {word} the most is {username}\n
+        With an impressive amount of {highest_count_tuple[2]} times""",
+        color=Color.gold()
     )
     await interaction.followup.send(embed=highest_count_embed)
     bot_logger.info('Highest count message sent')
 
 @client.tree.command(name="thc", description="Retrieve the total highest count of all words")
-async def total_highest_count(interaction: discord.Interaction):
+async def total_highest_count_command(interaction: discord.Interaction):
     """
     Retrieve the total highest count of all words across all users.
 
@@ -417,28 +407,24 @@ async def total_highest_count(interaction: discord.Interaction):
     """
     await interaction.response.defer()
     bot_logger.debug('Get user with highest amount of all words')
-    total_highest_count = sql_statements.get_total_highest_count_column()
+    highest_count_result = sql_statements.get_total_highest_count_column()
 
-    if total_highest_count is None:
-        no_count_embed = embed.Embed(
-            client.user.avatar,
-            title=f'Dead Server'
-        ).add_description(
-            f"""No User in this Server has said any word...\n
-            Or they tricked the system (not hard)"""
+    if highest_count_result is None:
+        no_count_embed = Embed(
+            title='Dead Server',
+            description=f"""No User in this Server has said any word...\n
+            Or they tricked the system (not hard)""",
+            color=Color.red()
         )
         await interaction.followup.send(embed=no_count_embed)
         return
 
-    username = client.get_user(total_highest_count[0]).display_name 
-    thc_embed = embed.Embed(
-        client.user.avatar,
-        title=f'Highest count of all words'
-    ).add_description(
-        f"""The winner for the Highest count of all words is... {username}!\n
-        Who has said {total_highest_count[1]} {total_highest_count[2]} times"""
-    ).add_footer(
-        f'Imagine 🗿'
+    username = client.get_user(highest_count_result[0]).display_name 
+    thc_embed = Embed(
+        title='Highest count of all words',
+        description=f"""The winner for the Highest count of all words is... {username}!\n
+        Who has said {highest_count_result[1]} {highest_count_result[2]} times""",
+        color=Color.gold()
     )
     await interaction.followup.send(embed=thc_embed)
     bot_logger.info('Message for total highest count sent')
@@ -455,12 +441,11 @@ async def show_words(interaction: discord.Interaction):
     bot_logger.debug('Show all words from database')
     words_database = sql_statements.get_words()
 
-    words_embed = embed.Embed(
-        client.user.avatar,
-        title=f'All words'
-    ).add_description(
-        f"""Here is a list of all the words you should rather not say...\n
-        {', '.join(words_database)}"""
+    words_embed = Embed(
+        title='All words',
+        description=f"""Here is a list of all the words you should rather not say...\n
+        {', '.join(words_database)}""",
+        color=Color.blue()
     )
     await interaction.followup.send(embed=words_embed)
     bot_logger.info('Message for all words sent')
@@ -484,12 +469,11 @@ async def add_word(interaction: discord.Interaction, word: str):
         # Scan server for new word
         await client.scan_for_new_word(word)
 
-        add_word_embed = embed.Embed(
-            client.user.avatar,
-            title=f'Word added'
-        ).add_description(
-            f"""Word that was added to the database:
-            {word}"""
+        add_word_embed = Embed(
+            title='Word added',
+            description=f"""Word that was added to the database:
+            {word}""",
+            color=Color.green()
         )
         await interaction.followup.send(embed=add_word_embed)
         bot_logger.info('Message for adding word sent')
@@ -512,12 +496,11 @@ async def remove_word(interaction: discord.Interaction, word: str):
     if sql_statements.check_user_is_admin(interaction.user.id):
         sql_statements.remove_word(word)
 
-        remove_word_embed = embed.Embed(
-            client.user.avatar,
-            title=f'Removed word'
-        ).add_description(
-            f"""Removed word from database:
-            {word}"""
+        remove_word_embed = Embed(
+            title='Removed word',
+            description=f"""Removed word from database:
+            {word}""",
+            color=Color.red()
         )
         await interaction.followup.send(embed=remove_word_embed)
         bot_logger.info('Message for removing word sent')
@@ -534,11 +517,9 @@ async def help_command(interaction: discord.Interaction):
     """
     await interaction.response.defer()
     bot_logger.debug('Handling help command')
-    help_embed = embed.Embed(
-        client.user.avatar,
-        title='Word Counter Bot Help'
-    ).add_description(
-        """Here are the available commands:
+    help_embed = Embed(
+        title='Word Counter Bot Help',
+        description="""Here are the available commands:
         
         /c [word] [user]: Count occurrences of a word for a specific user.
         /hc [word]: Retrieve the highest count of a word.
@@ -546,9 +527,10 @@ async def help_command(interaction: discord.Interaction):
         /sw: Show all tracked words.
         /aw [word]: Add word to database (admin-only).
         /rw [word]: Remove a word from database (admin-only).
-        """
-    ).add_footer(
-        "Use these commands wisely!"
+        """,
+        color=Color.blue()
+    ).set_footer(
+        text="Use these commands wisely!"
     )
     
     await interaction.followup.send(embed=help_embed)
@@ -575,12 +557,11 @@ async def handle_word_count(message: discord.Message, word: str):
 
         username = message.author.display_name 
 
-        first_time_embed = embed.Embed(
-            client.user.avatar,
-            title=f'First time 😩'
-        ).add_description(
-            f"""{username} was a naughty boy and said {word}\n
-            His first time... 💦"""
+        first_time_embed = Embed(
+            title='First time 😩',
+            description=f"""{username} was a naughty boy and said {word}\n
+            His first time... 💦""",
+            color=Color.red()
         )
         await message.channel.send(embed=first_time_embed)
         bot_logger.info(f'First time message sent: {username}, {word}')
@@ -597,12 +578,11 @@ async def permission_abuse(interaction: discord.Interaction):
     """
     bot_logger.debug('Permission abuse')
     admin_user = client.get_user(admin_ids[0]).display_name
-    mod_abuse_embed = embed.Embed(
-        client.user.avatar,
-        title=f'No permission'
-    ).add_description(
-        f"""You have no permission to perform this action\n
-        Call the admin: {admin_user}"""
+    mod_abuse_embed = Embed(
+        title='No permission',
+        description=f"""You have no permission to perform this action\n
+        Call the admin: {admin_user}""",
+        color=Color.red()
     )
     await interaction.followup.send(embed=mod_abuse_embed)
     bot_logger.info('Message for mod abuser sent')

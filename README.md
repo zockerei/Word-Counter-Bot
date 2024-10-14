@@ -1,59 +1,75 @@
 # Word-Counter-Bot
 
-"Help people interested in this repository understand your project by adding a README"<br>
-You are not interested in this bot...
+A Discord bot designed to count occurrences of specified words within messages. You are not interested in this bot...
 
 ## Description
 
-Word-Counter-Bot is a Discord bot designed to count occurrences of specified words within messages. It allows users to add multiple words and admin users for tracking purposes.<br>
-I did not test the bot in linux, although im sure it works. Just use the main, sql and embed.py
+Word-Counter-Bot is a Discord bot that tracks and counts specific words used by server members. It allows administrators to add and remove words for tracking purposes and provides various commands for users to check word counts and statistics.
+
+## Project Structure
+
+word-counter-bot/
+├── src/
+│ ├── main.py
+│ ├── config.py
+│ └── sql.py
+├── config/
+│ ├── bot_config.yaml
+│ └── logging_config.yaml
+├── db/
+│ └── word_counter.db (created automatically)
+└── logs/
+└── bot.log (created automatically)
 
 ## Commands
 
-- `/c`: Count occurrences of a word for a specific user. Example: `/c word user`
-- `/hc`: Retrieve the highest count of a word. Example: `/hc word`
-- `/thc`: Retrieve the total highest count of all words. `/thc`
-- `/sw`: Show all tracked words. Example: `/sw`
-- `/aw`: Add word to database (admin-only). Example: `/aw test`
-- `/rw`: Remove a word from database (admin-only). Example: `/rw test`
+- `/c <word> <user>`: Count occurrences of a word for a specific user
+- `/hc <word>`: Retrieve the highest count of a word
+- `/thc`: Retrieve the total highest count of all words
+- `/sw`: Show all tracked words
+- `/aw <word>`: Add word to database (admin-only)
+- `/rw <word>`: Remove a word from database (admin-only)
+- `/h`: Show bot usage instructions
 
-## How to run the bot
+## Setup and Configuration
 
-Word-Counter-Bot requires a configuration file (config.yaml) to run<br>
-config path needs to be passed as an argument `-p`<br>
-Example config.yaml in repository
-
-# Autostart with Windows Fluent Terminal
-
-To set up autostart using Windows Fluent Terminal, follow these steps:
-
-## Step 1: Add a New Profile to Terminal
-
-Create a new profile in the terminal settings.
-
-## Step 2: Configure Command Line
-
-Specify the command line. For example:
-
-- **Command Line Example:** `C:\wordcounter\main.exe`
-- **Starting Directory:** Not necessary
-
-Note: Merely putting `main.exe` in the command line and having the starting directory as `C:\wordcounter` doesn't work. Adjust other settings as per your preference.
-
-## Installation and Building
-
-To build an executable (.exe) from a Python script, you can use pyinstaller:
-
-1. Install pyinstaller using pip:
+1. Ensure you have Python 3.11 or later installed.
+2. Install required dependencies:
    ```
-   pip install pyinstaller
+   pip install discord.py pyyaml
+   ```
+3. Create a `config/bot_config.yaml` file with the following structure:
+   ```yaml
+   token: "YOUR_BOT_TOKEN"
+   words:
+     - "word1"
+     - "word2"
+   server_id: YOUR_SERVER_ID
+   channel_id: YOUR_CHANNEL_ID
+   admin_ids:
+     - ADMIN_USER_ID_1
+     - ADMIN_USER_ID_2
+   ```
+4. Create a `config/logging_config.yaml` file for logging configuration.
+5. Run the bot using:
+   ```
+   python src/main.py
    ```
 
-2. Navigate to the directory containing your Python script (your_script.py) using the command line.
+## Autostart with Windows Fluent Terminal
 
-3. Run the following command to create the executable:
-   ```
-   pyinstaller --onefile your_script.py
-   ```
+To set up autostart using Windows Fluent Terminal:
 
-   The `--onefile` option ensures the output is a single .exe file.
+1. Add a new profile in the terminal settings.
+2. Configure the command line:
+   - Command Line: `C:\path\to\your\src\main.py`
+   - Starting Directory: `C:\path\to\your\bot\directory`
+
+Adjust other settings as needed.
+
+## Notes
+
+- The bot uses SQLite for data storage (db/word_counter.db).
+- Logs are stored in the logs/bot.log file.
+- The bot requires appropriate Discord permissions to function correctly.
+- Ensure the bot has access to read message history for accurate counting.
