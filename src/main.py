@@ -30,14 +30,15 @@ bot_logger.debug(f'Intents setup complete: {intents}')
 # Load bot configuration
 with open(BOT_CONFIG_PATH, 'r') as config_file:
     bot_config = yaml.safe_load(config_file)
-    token, words, server_id, channel_id, admin_ids = (
+    token, words, server_id, channel_id, admin_ids, disable_initial_scan = (
         bot_config['token'],
         bot_config['words'],
         bot_config['server_id'],
         bot_config['channel_id'],
-        bot_config['admin_ids']
+        bot_config['admin_ids'],
+        bot_config.get('disable_initial_scan', False)
     )
-bot_logger.debug(f'{token} | {words} | {server_id} | {channel_id} | {admin_ids}')
+bot_logger.debug(f'{token} | {words} | {server_id} | {channel_id} | {admin_ids} | {disable_initial_scan}')
 bot_logger.info('bot_config loaded')
 
 class MyClient(discord.Client):
@@ -264,8 +265,11 @@ async def on_ready():
     # add admin user
     sql_statements.add_admins(*admin_ids)
 
-    # Scan server history
-    await client.scan_server_history()
+    # Scan server history if not disabled
+    if not disable_initial_scan:
+        await client.scan_server_history()
+    else:
+        bot_logger.info('Initial server history scan disabled')
 
     bot_logger.info('Bot ready')
 

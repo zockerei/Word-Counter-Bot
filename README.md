@@ -49,12 +49,17 @@ word-counter-bot/
    admin_ids:
      - ADMIN_USER_ID_1
      - ADMIN_USER_ID_2
+   disable_initial_scan: false
    ```
 4. Create a `config/logging_config.yaml` file for logging configuration.
 5. Run the bot using:
    ```
    python src/main.py
    ```
+
+### Configuration Options
+
+- `disable_initial_scan`: Set to `true` to disable the initial server history scan when the bot starts. Default is `false`.
 
 ## Autostart with Windows Fluent Terminal
 
@@ -73,3 +78,4 @@ Adjust other settings as needed.
 - Logs are stored in the logs/bot.log file.
 - The bot requires appropriate Discord permissions to function correctly.
 - Ensure the bot has access to read message history for accurate counting.
+- If `disable_initial_scan` is set to `true`, the bot will not perform an initial scan of the server's message history on startup. This can be useful for large servers or if you want to start fresh without scanning old messages.
