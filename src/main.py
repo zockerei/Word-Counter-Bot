@@ -62,7 +62,7 @@ class MyClient(discord.Client):
         General scan method for server, user, or word.
 
         Args:
-            word_counts (dict): A dictionary to accumulate word counts.
+            word_counts (dict, optional): A dictionary to accumulate word counts.
             target_user_id (int, optional): If provided, scans only for this user.
             target_word (str, optional): If provided, scans for this word only.
         """
@@ -83,8 +83,13 @@ class MyClient(discord.Client):
         Scans a channel and its threads.
 
         Args:
-            target_user_id (int, optional): Scans for a specific user.
-            target_word (str, optional): Scans for a specific word.
+            channel (discord.TextChannel): The channel to scan.
+            word_counts (dict): A dictionary to accumulate word counts.
+            target_user_id (int, optional): If provided, scans only for this user.
+            target_word (str, optional): If provided, scans for this word only.
+
+        Returns:
+            int: The number of messages scanned.
         """
         # Scan messages in the channel
         messages_scanned = await self.scan_messages(channel, word_counts, target_user_id, target_word)
@@ -101,8 +106,13 @@ class MyClient(discord.Client):
         Scans messages in a channel or thread.
 
         Args:
-            target_user_id (int, optional): Scans for a specific user.
-            target_word (str, optional): Scans for a specific word.
+            channel (discord.TextChannel or discord.Thread): The channel or thread to scan.
+            word_counts (dict): A dictionary to accumulate word counts.
+            target_user_id (int, optional): If provided, scans only for this user.
+            target_word (str, optional): If provided, scans for this word only.
+
+        Returns:
+            int: The number of messages scanned.
         """
         messages_scanned = 0
         async for message in channel.history(limit=None):
@@ -118,7 +128,9 @@ class MyClient(discord.Client):
         Processes a message to count occurrences of words.
 
         Args:
-            target_word (str, optional): Counts only occurrences of this word.
+            message (discord.Message): The message to process.
+            word_counts (dict): A dictionary to accumulate word counts.
+            target_word (str, optional): If provided, counts only occurrences of this word.
         """
         content_lower = message.content.lower()
         words_to_check = [target_word] if target_word else sql_statements.get_words()
@@ -131,6 +143,9 @@ class MyClient(discord.Client):
     def update_word_counts(word_counts):
         """
         Updates the database with word counts, only if the new count is higher.
+
+        Args:
+            word_counts (dict): A dictionary containing word counts for users.
         """
         for user_id, words in word_counts.items():
             for word, count in words.items():

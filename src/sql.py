@@ -346,9 +346,9 @@ class SqlStatements:
         """
         SqlStatements._sql_logger.debug('Updating count')
         query = """
-            insert into user_has_word (user_id, word_name, count)
-            values (:user_id, :word, :count)
-            on conflict(user_id, word_name) do update set count = count + :count;
+            INSERT INTO user_has_word (user_id, word_name, count)
+            VALUES (:user_id, :word, :count)
+            ON CONFLICT(user_id, word_name) DO UPDATE SET count = user_has_word.count + :count;
         """
         SqlStatements._execute_query(
             query,
