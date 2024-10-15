@@ -18,8 +18,10 @@ word-counter-bot/
 │   └── logging_config.yaml
 ├── db/
 │   └── word_counter.db (created automatically)
-└── logs/
-    └── bot.log (created automatically)
+├── logs/
+│   └── bot.log (created automatically)
+├── requirements.txt
+└── run.bat
 ```
 ## Commands
 
@@ -55,7 +57,7 @@ word-counter-bot/
 4. Create a `config/logging_config.yaml` file for logging configuration.
 5. Run the bot using:
    ```
-   python src/main.py
+   run.bat
    ```
 
 ### Configuration Options
@@ -68,7 +70,7 @@ To set up autostart using Windows Fluent Terminal:
 
 1. Add a new profile in the terminal settings.
 2. Configure the command line:
-   - Command Line: `C:\path\to\your\src\main.py`
+   - Command Line: `C:\path\to\your\run.bat
    - Starting Directory: `C:\path\to\your\bot\directory`
 
 Adjust other settings as needed.
@@ -80,3 +82,4 @@ Adjust other settings as needed.
 - The bot requires appropriate Discord permissions to function correctly.
 - Ensure the bot has access to read message history for accurate counting.
 - If `disable_initial_scan` is set to `true`, the bot will not perform an initial scan of the server's message history on startup. This can be useful for large servers or if you want to start fresh without scanning old messages.
+- Use `run.bat` to start the bot, which will handle any necessary setup and execution steps automatically.

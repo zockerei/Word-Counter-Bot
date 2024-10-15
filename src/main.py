@@ -163,7 +163,6 @@ async def on_member_join(member: discord.Member):
     """
     bot_logger.info(f"{member} joined")
     sql_statements.add_user_ids(member.id)
-    await client.scan(target_user_id=member.id)
 
     # Create embed for new user
     username = member.display_name 
@@ -178,6 +177,8 @@ async def on_member_join(member: discord.Member):
 
     # Send embed to the designated channel
     await client.get_channel(channel_id).send(embed=new_user_embed)
+
+    await client.scan(target_user_id=member.id)
     bot_logger.info('New user message sent')
 
 @client.event
