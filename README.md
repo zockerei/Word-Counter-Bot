@@ -30,6 +30,7 @@ word-counter-bot/
 - `/aw <word>`: Add word to database (admin-only)
 - `/rw <word>`: Remove a word from database (admin-only)
 - `/h`: Show bot usage instructions
+- `/uwc <user>`: Show all words and their counts for a specific user
 
 ## Setup and Configuration
 

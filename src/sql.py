@@ -406,3 +406,28 @@ class SqlStatements:
             fetch_one=True
         )
         return permission[0] == 'admin'
+
+    @staticmethod
+    def get_user_word_counts(user_id: int) -> List[Tuple[str, int]]:
+        """
+        Get all words and their counts for a specific user.
+
+        Args:
+            user_id (int): The ID of the user.
+
+        Returns:
+            List[Tuple[str, int]]: A list of tuples containing words and their counts for the user.
+        """
+        SqlStatements._sql_logger.debug(f'Get all words and counts for user: {user_id}')
+        query = """
+            select word_name, count from user_has_word
+            where user_id = :user_id
+        """
+        result = SqlStatements._execute_query(
+            query,
+            f'Successfully retrieved words and counts for user: {user_id}',
+            f'Error retrieving words and counts for user: {user_id}',
+            {'user_id': user_id},
+            fetch_one=False
+        )
+        return result if result else []

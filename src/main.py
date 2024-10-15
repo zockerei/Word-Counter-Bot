@@ -416,6 +416,40 @@ async def help_command(interaction: discord.Interaction):
     await interaction.followup.send(embed=help_embed)
     bot_logger.info('Help message sent')
 
+@client.tree.command(name="uwc", description="Show all words and their counts for a specific user")
+@app_commands.describe(user="The user to check")
+async def user_word_counts(interaction: discord.Interaction, user: discord.Member):
+    """
+    Show all words and their counts for a specific user.
+
+    Args:
+        interaction (discord.Interaction): The interaction object.
+        user (discord.Member): The user to check.
+    """
+    await interaction.response.defer()
+    bot_logger.debug('Get all words and counts for user')
+
+    user_id = user.id
+    word_counts = sql_statements.get_user_word_counts(user_id)
+
+    if not word_counts:
+        no_words_embed = Embed(
+            title=f'{user.display_name} has no words',
+            description=f"{user.display_name} hasn't said any tracked words.",
+            color=Color.red()
+        )
+        await interaction.followup.send(embed=no_words_embed)
+        return
+
+    words_description = "\n".join([f"{word}: {count}" for word, count in word_counts])
+    user_words_embed = Embed(
+        title=f'Word counts for {user.display_name}',
+        description=words_description,
+        color=Color.blue()
+    )
+    await interaction.followup.send(embed=user_words_embed)
+    bot_logger.info(f'Word counts for {user.display_name} sent')
+
 async def handle_word_count(message: discord.Message, word: str):
     """
     Handle word count in a message.
