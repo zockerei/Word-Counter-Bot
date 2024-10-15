@@ -442,7 +442,8 @@ async def user_word_counts(interaction: discord.Interaction, user: discord.Membe
         await interaction.followup.send(embed=no_words_embed)
         return
 
-    words_description = "\n".join([f"{word}: {count}" for word, count in word_counts])
+    sorted_word_counts = sorted(word_counts, key=lambda x: x[1], reverse=True)
+    words_description = "\n".join([f"{word}: {count}" for word, count in sorted_word_counts])
     user_words_embed = Embed(
         title=f'Word counts for {user.display_name}',
         description=words_description,
