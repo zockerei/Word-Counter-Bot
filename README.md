@@ -7,20 +7,20 @@ A Discord bot designed to count occurrences of specified words within messages. 
 Word-Counter-Bot is a Discord bot that tracks and counts specific words used by server members. It allows administrators to add and remove words for tracking purposes and provides various commands for users to check word counts and statistics.
 
 ## Project Structure
-
+```bash
 word-counter-bot/
 ├── src/
-│ ├── main.py
-│ ├── config.py
-│ └── sql.py
+│   ├── main.py
+│   ├── sql.py
+│   └── embed.py
 ├── config/
-│ ├── bot_config.yaml
-│ └── logging_config.yaml
+│   ├── bot_config.yaml
+│   └── logging_config.yaml
 ├── db/
-│ └── word_counter.db (created automatically)
+│   └── word_counter.db (created automatically)
 └── logs/
-└── bot.log (created automatically)
-
+    └── bot.log (created automatically)
+```
 ## Commands
 
 - `/c <word> <user>`: Count occurrences of a word for a specific user
