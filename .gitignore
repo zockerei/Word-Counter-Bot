@@ -5,3 +5,4 @@ bot.log
 db/
 main.spec
 config/config.txt
+venv/
