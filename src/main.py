@@ -457,11 +457,12 @@ async def permission_abuse(interaction: discord.Interaction):
         interaction (discord.Interaction): The interaction object.
     """
     bot_logger.debug('Permission abuse')
-    admin_user = client.get_user(admin_ids[0]).display_name
+    admin_users = [client.get_user(admin_id).display_name for admin_id in admin_ids]
+    admin_list = ', '.join(admin_users)
     mod_abuse_embed = Embed(
         title='No permission',
         description=f"""You have no permission to perform this action\n
-        Call the admins: {admin_user}""",
+        Call the admins: {admin_list}""",
         color=Color.red()
     )
     await interaction.followup.send(embed=mod_abuse_embed)
