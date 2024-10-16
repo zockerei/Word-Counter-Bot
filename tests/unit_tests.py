@@ -4,12 +4,11 @@ import logging.config
 import sys
 from pathlib import Path
 
-# Add the 'src' directory to the Python path
 project_root = Path(__file__).resolve().parent.parent
 sys.path.append(str(project_root / 'src'))
 
 from config import LOGGING_CONFIG_PATH, DB_PATH, LOG_FILE_PATH
-import sql as sql  # Import sql from the src directory
+import sql as sql
 
 
 class TestSqlModule(unittest.TestCase):
@@ -415,6 +414,101 @@ class TestSqlModule(unittest.TestCase):
         # Check if the count is updated correctly
         self.assertEqual(result, 10)
         self._logger.debug(f'Updated count: {result}')
+
+    def test_check_user_has_word(self):
+        self._logger.debug('Testing check_user_has_word method')
+
+        # Add a user and a word to the database
+        user_id = 123456789012345678
+        word = 'testword'
+        count = 1
+        self.sql_statements.add_user_ids(user_id)
+        self.sql_statements.add_words(word)
+        self.sql_statements.add_user_has_word(user_id, word, count)
+
+        # Check if the user has the word
+        has_word = self.sql_statements.check_user_has_word(user_id, word)
+        self.assertTrue(has_word, f"User {user_id} should have the word '{word}'")
+
+        # Check for a word the user does not have
+        non_existing_word = 'nonexistentword'
+        has_word = self.sql_statements.check_user_has_word(user_id, non_existing_word)
+        self.assertFalse(has_word, f"User {user_id} should not have the word '{non_existing_word}'")
+
+        self._logger.info('check_user_has_word method tested successfully')
+
+    def test_check_user_is_admin(self):
+        self._logger.debug('Testing check_user_is_admin method')
+
+        # Add a user with admin permission
+        user_id = 123456789012345678
+        self.sql_statements.add_user_ids(user_id)
+        self.sql_statements.add_admins(user_id)
+
+        # Check if the user is an admin
+        is_admin = self.sql_statements.check_user_is_admin(user_id)
+        self.assertTrue(is_admin, f"User {user_id} should be an admin")
+
+        # Add a user without admin permission
+        non_admin_user_id = 987654321098765432
+        self.sql_statements.add_user_ids(non_admin_user_id)
+
+        # Check if the user is not an admin
+        is_admin = self.sql_statements.check_user_is_admin(non_admin_user_id)
+        self.assertFalse(is_admin, f"User {non_admin_user_id} should not be an admin")
+
+        self._logger.info('check_user_is_admin method tested successfully')
+
+    def test_get_total_highest_count_column(self):
+        self._logger.debug('Testing get_total_highest_count_column method')
+
+        # Input data for testing
+        user_ids = [372045873095639040, 123456789012345678, 987654321098765432]
+        words = ['word1', 'word2', 'word3']
+        counts = [5, 8, 3]
+
+        # Add data to the database
+        for user_id, word, count in zip(user_ids, words, counts):
+            self.sql_statements.add_user_has_word(user_id, word, count)
+
+        # Get the total highest count column
+        result = self.sql_statements.get_total_highest_count_column()
+
+        # Check if the result is not None
+        self.assertIsNotNone(result, "The result should not be None")
+
+        # Check if the result matches the expected data
+        expected_user_id = user_ids[counts.index(max(counts))]
+        expected_word = words[counts.index(max(counts))]
+        expected_count = max(counts)
+        self.assertEqual(result[0], expected_user_id)
+        self.assertEqual(result[1], expected_word)
+        self.assertEqual(result[2], expected_count)
+
+        self._logger.info('get_total_highest_count_column method tested successfully')
+
+    def test_get_user_word_counts(self):
+        self._logger.debug('Testing get_user_word_counts method')
+
+        # Input data for testing
+        user_id = 123456789012345678
+        words = ['word1', 'word2', 'word3']
+        counts = [5, 6, 7]
+
+        # Add data to the database
+        self.sql_statements.add_user_ids(user_id)
+        self.sql_statements.add_words(*words)
+        for word, count in zip(words, counts):
+            self.sql_statements.add_user_has_word(user_id, word, count)
+
+        # Get the user's word counts
+        result = self.sql_statements.get_user_word_counts(user_id)
+
+        # Check if the result matches the expected data
+        expected_result = list(zip(words, counts))
+        self.assertCountEqual(result, expected_result, "The user's word counts do not match the expected data")
+
+        self._logger.info('get_user_word_counts method tested successfully')
 
 
 if __name__ == '__main__':

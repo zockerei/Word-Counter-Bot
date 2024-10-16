@@ -112,7 +112,8 @@ class SqlStatements:
                     word_name varchar(45),
                     count integer,
                     foreign key (user_id) references user (id),
-                    foreign key (word_name) references word (name)
+                    foreign key (word_name) references word (name),
+                    unique(user_id, word_name)
                 );"""
         }
         for name, script in table_scripts.items():
@@ -348,7 +349,7 @@ class SqlStatements:
         query = """
             INSERT INTO user_has_word (user_id, word_name, count)
             VALUES (:user_id, :word, :count)
-            ON CONFLICT(user_id, word_name) DO UPDATE SET count = user_has_word.count + :count;
+            ON CONFLICT(user_id, word_name) DO UPDATE SET count = count + :count;
         """
         SqlStatements._execute_query(
             query,
