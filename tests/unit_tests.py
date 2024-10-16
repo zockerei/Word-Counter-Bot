@@ -1,8 +1,14 @@
 import unittest
 import yaml
 import logging.config
+import sys
+from pathlib import Path
+
+project_root = Path(__file__).resolve().parent.parent
+sys.path.append(str(project_root / 'src'))
+
 from config import LOGGING_CONFIG_PATH, DB_PATH, LOG_FILE_PATH
-import src.sql as sql
+import sql as sql
 
 
 class TestSqlModule(unittest.TestCase):
@@ -20,14 +26,12 @@ class TestSqlModule(unittest.TestCase):
         cls._logger.info('Logging config complete')
 
     def setUp(self):
-        # Create sql_statements variable
+        # Initialize SQL statements and create tables
         self.sql_statements = sql.SqlStatements()
-
-        # Create tables
         self.sql_statements.create_tables()
 
     def tearDown(self):
-        # Drop tables afterwards
+        # Drop tables after each test
         self.sql_statements.drop_tables()
 
     def test_create_tables(self):
@@ -36,23 +40,20 @@ class TestSqlModule(unittest.TestCase):
 
         # Check if 'user' table exists
         self._logger.debug('User table creation test')
-        self.sql_statements.cursor.execute(
+        result = self.sql_statements._execute_query(
             """SELECT name FROM sqlite_master
-            WHERE type='table' AND name='user'"""
+            WHERE type='table' AND name='user'""",
+            fetch_one=True
         )
-        table_exists = self.sql_statements.cursor.fetchone() is not None
+        table_exists = result is not None
         self.assertTrue(table_exists, "The 'user' table does not exist")
         self._logger.info('User table created successfully')
 
         # Check if 'user' table has expected columns
         self._logger.debug('User table columns test')
-        self.sql_statements.cursor.execute("PRAGMA table_info(user)")
-        columns = [
-            row[1]
-            for row
-            in self.sql_statements.cursor.fetchall()
-        ]
-        expected_columns = ['id', 'permission']  # Updated to include 'permission' column
+        result = self.sql_statements._execute_query("PRAGMA table_info(user)")
+        columns = [row[1] for row in result]
+        expected_columns = ['id', 'permission']
         self.assertCountEqual(
             columns,
             expected_columns,
@@ -62,22 +63,19 @@ class TestSqlModule(unittest.TestCase):
 
         # Check if 'word' table exists
         self._logger.debug('Word table creation test')
-        self.sql_statements.cursor.execute(
+        result = self.sql_statements._execute_query(
             """SELECT name FROM sqlite_master
-            WHERE type='table' AND name='word'"""
+            WHERE type='table' AND name='word'""",
+            fetch_one=True
         )
-        table_exists = self.sql_statements.cursor.fetchone() is not None
+        table_exists = result is not None
         self.assertTrue(table_exists, "The 'word' table does not exist")
         self._logger.info('Word table created successfully')
 
         # Check if 'word' table has expected columns
         self._logger.debug('Word table columns test')
-        self.sql_statements.cursor.execute("PRAGMA table_info(word)")
-        columns = [
-            row[1]
-            for row
-            in self.sql_statements.cursor.fetchall()
-        ]
+        result = self.sql_statements._execute_query("PRAGMA table_info(word)")
+        columns = [row[1] for row in result]
         expected_columns = ['name']
         self.assertCountEqual(
             columns,
@@ -88,22 +86,19 @@ class TestSqlModule(unittest.TestCase):
 
         # Check if 'user_has_word' table exists
         self._logger.debug('User_has_word table creation test')
-        self.sql_statements.cursor.execute(
+        result = self.sql_statements._execute_query(
             """SELECT name FROM sqlite_master
-            WHERE type='table' AND name='user_has_word'"""
+            WHERE type='table' AND name='user_has_word'""",
+            fetch_one=True
         )
-        table_exists = self.sql_statements.cursor.fetchone() is not None
+        table_exists = result is not None
         self.assertTrue(table_exists, "The 'user_has_word' table does not exist")
         self._logger.info('User_has_word table created successfully')
 
         # Check if 'user_has_word' table has expected columns
         self._logger.debug('User_has_word table columns test')
-        self.sql_statements.cursor.execute("PRAGMA table_info(user_has_word)")
-        columns = [
-            row[1]
-            for row
-            in self.sql_statements.cursor.fetchall()
-        ]
+        result = self.sql_statements._execute_query("PRAGMA table_info(user_has_word)")
+        columns = [row[1] for row in result]
         expected_columns = ['user_id', 'word_name', 'count']
         self.assertCountEqual(
             columns,
@@ -114,12 +109,8 @@ class TestSqlModule(unittest.TestCase):
 
         # Check foreign key constraints
         self._logger.debug('Foreign key constraints test')
-        self.sql_statements.cursor.execute("PRAGMA foreign_key_list(user_has_word)")
-        foreign_keys = [
-            row[3]  # column name of the referenced table
-            for row
-            in self.sql_statements.cursor.fetchall()
-        ]
+        result = self.sql_statements._execute_query("PRAGMA foreign_key_list(user_has_word)")
+        foreign_keys = [row[3] for row in result]
         expected_foreign_keys = ['user_id', 'word_name']
         self.assertCountEqual(
             foreign_keys,
@@ -139,17 +130,13 @@ class TestSqlModule(unittest.TestCase):
 
         # Verify that the words are added to the database
         self._logger.debug('Verifying words added to database')
-        self.sql_statements.cursor.execute(
+        result = self.sql_statements._execute_query(
             """select * from word
             where name in (:word1, :word2, :word3)""",
-            {'word1': words_to_add[0], 'word2': words_to_add[1], 'word3': words_to_add[2]}
+            params={'word1': words_to_add[0], 'word2': words_to_add[1], 'word3': words_to_add[2]}
         )
 
-        added_words = [
-            row[0]
-            for row
-            in self.sql_statements.cursor.fetchall()
-        ]
+        added_words = [row[0] for row in result]
 
         self.assertCountEqual(
             added_words,
@@ -159,23 +146,23 @@ class TestSqlModule(unittest.TestCase):
         self._logger.info('add_words method tested successfully')
 
     def test_add_user_ids(self):
-        self._logger.debug('Testing add_guild_members method')
+        self._logger.debug('Testing add_user_ids method')  # Updated method name
 
-        # Define the guild members to add
-        guild_members = {372045873095639040, 123456789012345678, 987654321098765432}
+        # Define the user IDs to add
+        user_ids = {372045873095639040, 123456789012345678, 987654321098765432}
 
-        # Call add_guild_members method
-        self._logger.debug('Calling add_guild_members method')
-        self.sql_statements.add_user_ids(*guild_members)
+        # Call add_user_ids method
+        self._logger.debug('Calling add_user_ids method')  # Updated method name
+        self.sql_statements.add_user_ids(*user_ids)
 
         # Verify that the users were added to the database
         added_users = self.sql_statements.get_all_users()
 
-        self.assertSetEqual(set(added_users), guild_members, 'Not all users were added to the database')
-        self._logger.info('add_guild_members method tested successfully')
+        self.assertSetEqual(set(added_users), user_ids, 'Not all users were added to the database')
+        self._logger.info('add_user_ids method tested successfully')  # Updated method name
 
     def test_add_admin(self):
-        self._logger.debug('Testing add_admin method')
+        self._logger.debug('Testing add_admins method')  # Updated method name
 
         # Test adding admin to an existing user (success case)
         user_id_existing_user = 1
@@ -185,9 +172,9 @@ class TestSqlModule(unittest.TestCase):
             params={'user_id': user_id_existing_user, 'permission': 'user'}
         )
 
-        # Call the add_admin method
-        self._logger.debug(f"Calling add_admin method for user {user_id_existing_user}")
-        self.sql_statements.add_admins(user_id_existing_user)
+        # Call the add_admins method
+        self._logger.debug(f"Calling add_admins method for user {user_id_existing_user}")  # Updated method name
+        self.sql_statements.add_admins(user_id_existing_user)  # Updated method name
 
         # Check if the user is now an admin in the database
         result_existing_user = self.sql_statements._execute_query(
@@ -208,9 +195,9 @@ class TestSqlModule(unittest.TestCase):
             params={'user_id': user_id_existing_admin, 'permission': 'admin'}
         )
 
-        # Call the add_admin method
-        self._logger.debug(f"Calling add_admin method for admin {user_id_existing_admin}")
-        self.sql_statements.add_admins(user_id_existing_admin)
+        # Call the add_admins method
+        self._logger.debug(f"Calling add_admins method for admin {user_id_existing_admin}")  # Updated method name
+        self.sql_statements.add_admins(user_id_existing_admin)  # Updated method name
 
         # Check if the admin's permission is still 'admin' in the database
         result_existing_admin = self.sql_statements._execute_query(
@@ -237,9 +224,12 @@ class TestSqlModule(unittest.TestCase):
         for user_id, word, count in zip(user_ids, words, counts):
             self.sql_statements.add_user_has_word(user_id, word, count)
 
-        # Verify the data is inserted correctly
-        with sql.SqlStatements._sqlite_connection:
-            result = sql.SqlStatements.cursor.execute("select * from user_has_word").fetchall()
+        # Verify the data is inserted correctly using the existing method
+        result = self.sql_statements._execute_query(
+            "SELECT * FROM user_has_word",
+            'Fetched user_has_word records successfully',
+            'Error fetching user_has_word records'
+        )
         self._logger.debug(f'Result tuple is: {result}')
 
         # Check if the number of rows inserted matches the input data
@@ -247,8 +237,7 @@ class TestSqlModule(unittest.TestCase):
         self._logger.debug(f'Number of rows inserted: {len(result)}')
 
         # Check if the inserted data matches the input data
-        for row, (expected_user_id, expected_word, expected_count)\
-                in zip(result, zip(user_ids, words, counts)):
+        for row, (expected_user_id, expected_word, expected_count) in zip(result, zip(user_ids, words, counts)):
             self.assertEqual(row[0], expected_user_id)
             self.assertEqual(row[1], expected_word)
             self.assertEqual(row[2], expected_count)
@@ -387,7 +376,7 @@ class TestSqlModule(unittest.TestCase):
         self.assertNotEqual(result, None)
         self._logger.debug(f'Result for {word}: {result}')
 
-        # Check if the result is a tuple with the expected format (user_id, word, count)
+        # Check if the result is a tuple with the expected format (user_id, word_name, count)
         self.assertIsInstance(result, tuple)
         self.assertEqual(len(result), 3)
         self._logger.debug(f'Result format for {word} is as expected')
@@ -405,30 +394,121 @@ class TestSqlModule(unittest.TestCase):
         self._logger.debug('Testing update_user_count method')
 
         # Input data for testing
-        user_id = [372045873095639040]
+        user_id = 372045873095639040
         word = 'word1'
-        count = [5]
+        initial_count = 5
 
-        # Insert user, word, and count
-        self.sql_statements.add_user_has_word(user_id[0], word, count[0])
+        # Insert user, word, and initial count
+        self.sql_statements.add_user_ids(user_id)
+        self.sql_statements.add_words(word)
+        self.sql_statements.add_user_has_word(user_id, word, initial_count)
 
-        # Call the update method
-        self.sql_statements.update_user_count(user_id[0], word, count[0])
+        # Call the update method to add 5 more to the count
+        self.sql_statements.update_user_count(user_id, word, 5)
 
         # Verify the data is updated correctly
-        with sql.SqlStatements._sqlite_connection:
-            result = sql.SqlStatements.cursor.execute(
-                """select count from user_has_word
-                where user_id = :user_id
-                and word_name = :word""",
-                {'user_id': user_id[0], 'word': word}
-            ).fetchone()[0]
+        result = self.sql_statements.get_count(user_id, word)  # Use get_count method to verify
 
         self.assertIsNotNone(result)
 
         # Check if the count is updated correctly
         self.assertEqual(result, 10)
         self._logger.debug(f'Updated count: {result}')
+
+    def test_check_user_has_word(self):
+        self._logger.debug('Testing check_user_has_word method')
+
+        # Add a user and a word to the database
+        user_id = 123456789012345678
+        word = 'testword'
+        count = 1
+        self.sql_statements.add_user_ids(user_id)
+        self.sql_statements.add_words(word)
+        self.sql_statements.add_user_has_word(user_id, word, count)
+
+        # Check if the user has the word
+        has_word = self.sql_statements.check_user_has_word(user_id, word)
+        self.assertTrue(has_word, f"User {user_id} should have the word '{word}'")
+
+        # Check for a word the user does not have
+        non_existing_word = 'nonexistentword'
+        has_word = self.sql_statements.check_user_has_word(user_id, non_existing_word)
+        self.assertFalse(has_word, f"User {user_id} should not have the word '{non_existing_word}'")
+
+        self._logger.info('check_user_has_word method tested successfully')
+
+    def test_check_user_is_admin(self):
+        self._logger.debug('Testing check_user_is_admin method')
+
+        # Add a user with admin permission
+        user_id = 123456789012345678
+        self.sql_statements.add_user_ids(user_id)
+        self.sql_statements.add_admins(user_id)
+
+        # Check if the user is an admin
+        is_admin = self.sql_statements.check_user_is_admin(user_id)
+        self.assertTrue(is_admin, f"User {user_id} should be an admin")
+
+        # Add a user without admin permission
+        non_admin_user_id = 987654321098765432
+        self.sql_statements.add_user_ids(non_admin_user_id)
+
+        # Check if the user is not an admin
+        is_admin = self.sql_statements.check_user_is_admin(non_admin_user_id)
+        self.assertFalse(is_admin, f"User {non_admin_user_id} should not be an admin")
+
+        self._logger.info('check_user_is_admin method tested successfully')
+
+    def test_get_total_highest_count_column(self):
+        self._logger.debug('Testing get_total_highest_count_column method')
+
+        # Input data for testing
+        user_ids = [372045873095639040, 123456789012345678, 987654321098765432]
+        words = ['word1', 'word2', 'word3']
+        counts = [5, 8, 3]
+
+        # Add data to the database
+        for user_id, word, count in zip(user_ids, words, counts):
+            self.sql_statements.add_user_has_word(user_id, word, count)
+
+        # Get the total highest count column
+        result = self.sql_statements.get_total_highest_count_column()
+
+        # Check if the result is not None
+        self.assertIsNotNone(result, "The result should not be None")
+
+        # Check if the result matches the expected data
+        expected_user_id = user_ids[counts.index(max(counts))]
+        expected_word = words[counts.index(max(counts))]
+        expected_count = max(counts)
+        self.assertEqual(result[0], expected_user_id)
+        self.assertEqual(result[1], expected_word)
+        self.assertEqual(result[2], expected_count)
+
+        self._logger.info('get_total_highest_count_column method tested successfully')
+
+    def test_get_user_word_counts(self):
+        self._logger.debug('Testing get_user_word_counts method')
+
+        # Input data for testing
+        user_id = 123456789012345678
+        words = ['word1', 'word2', 'word3']
+        counts = [5, 6, 7]
+
+        # Add data to the database
+        self.sql_statements.add_user_ids(user_id)
+        self.sql_statements.add_words(*words)
+        for word, count in zip(words, counts):
+            self.sql_statements.add_user_has_word(user_id, word, count)
+
+        # Get the user's word counts
+        result = self.sql_statements.get_user_word_counts(user_id)
+
+        # Check if the result matches the expected data
+        expected_result = list(zip(words, counts))
+        self.assertCountEqual(result, expected_result, "The user's word counts do not match the expected data")
+
+        self._logger.info('get_user_word_counts method tested successfully')
 
 
 if __name__ == '__main__':
