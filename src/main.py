@@ -423,6 +423,7 @@ async def help_command(interaction: discord.Interaction):
         /sw: Show all tracked words.
         /aw [word]: Add word to database (admin-only).
         /rw [word]: Remove a word from database (admin-only).
+        /uwc [user]: Show all words and their counts for a specific user.
         """,
         color=Color.blue()
     ).set_footer(
