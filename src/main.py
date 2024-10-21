@@ -5,6 +5,7 @@ import yaml
 from config import LOGGING_CONFIG_PATH, BOT_CONFIG_PATH, LOG_FILE_PATH
 import sql
 from collections import defaultdict
+from unidecode import unidecode
 
 # Logging setup
 with open(LOGGING_CONFIG_PATH, 'r') as config_file:
@@ -118,7 +119,7 @@ class MyClient(discord.Client):
         async for message in channel.history(limit=None):
             messages_scanned += 1
             if target_user_id and message.author.id != target_user_id:
-                continue  # Skip messages not from the target user
+                continue
             self.process_message(message, word_counts, target_word)
         return messages_scanned
 
@@ -132,12 +133,14 @@ class MyClient(discord.Client):
             word_counts (dict): A dictionary to accumulate word counts.
             target_word (str, optional): If provided, counts only occurrences of this word.
         """
-        content_lower = message.content.lower()
+        # Use unidecode to convert styled text to ASCII
+        content_normalized = unidecode(message.content).lower()
+        
         words_to_check = [target_word] if target_word else sql_statements.get_words()
 
         for word in words_to_check:
-            if word and word in content_lower:
-                word_counts[message.author.id][word] += content_lower.count(word)
+            if word and word in content_normalized:
+                word_counts[message.author.id][word] += content_normalized.count(word)
 
     @staticmethod
     def update_word_counts(word_counts):
@@ -147,13 +150,13 @@ class MyClient(discord.Client):
         Args:
             word_counts (dict): A dictionary containing word counts for users.
         """
-        for user_id, words in word_counts.items():
-            for word, count in words.items():
+        for user_id, update_words in word_counts.items():
+            for word, update_count in update_words.items():
                 current_count = sql_statements.get_count(user_id, word)
                 if current_count is None:
-                    sql_statements.add_user_has_word(user_id, word, count)
-                elif count > current_count:
-                    sql_statements.update_user_count(user_id, word, count - current_count)
+                    sql_statements.add_user_has_word(user_id, word, update_count)
+                elif update_count > current_count:
+                    sql_statements.update_user_count(user_id, word, update_count - current_count)
 
 client = MyClient()
 
@@ -208,8 +211,12 @@ async def on_message(message: discord.Message):
     if message.author == client.user:
         return
 
+    # Format the message content using unidecode
+    formatted_content = unidecode(message.content).lower()
+    bot_logger.debug(f'Formatted content: {formatted_content}')
+
     current_words = sql_statements.get_words()
-    words_in_message = message.content.lower().split()
+    words_in_message = formatted_content.split()
     for word in current_words:
         if word.lower() in words_in_message:
             await handle_word_count(message, word)
@@ -459,7 +466,7 @@ async def user_word_counts(interaction: discord.Interaction, user: discord.Membe
         return
 
     sorted_word_counts = sorted(word_counts, key=lambda x: x[1], reverse=True)
-    words_description = "\n".join([f"{word}: {count}" for word, count in sorted_word_counts])
+    words_description = "\n".join([f"{word}: {user_count}" for word, user_count in sorted_word_counts])
     user_words_embed = Embed(
         title=f'Word counts for {user.display_name}',
         description=words_description,
@@ -480,7 +487,11 @@ async def handle_word_count(message: discord.Message, word: str):
         word (str): The word to count in the message.
     """
     bot_logger.debug(f'Word: {word} found in message')
-    word_count = message.content.lower().split().count(word.lower())
+
+    # Use the same formatting as in on_message
+    formatted_content = unidecode(message.content).lower()
+
+    word_count = formatted_content.split().count(word.lower())
     user_id = message.author.id
 
     if sql_statements.get_count(user_id, word) is None:

@@ -36,11 +36,6 @@ loggers:
     handlers: [file, console]
     propagate: no
 
-  bot.embed:
-    level: INFO
-    handlers: [file, console]
-    propagate: no
-
   bot.unittest:
     level: INFO
     handlers: [file, console]
