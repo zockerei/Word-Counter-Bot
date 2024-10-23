@@ -64,7 +64,7 @@ class SqlStatements:
 
             result = cursor.fetchone() if fetch_one else cursor.fetchall()
             connection.commit()
-            SqlStatements._sql_logger.debug(success_message)
+            SqlStatements._sql_logger.debug(f'{success_message}, result: {result}')
             return result
 
         except sqlite3.Error as error:
@@ -75,21 +75,6 @@ class SqlStatements:
                 cursor.close()
             if connection:
                 connection.close()
-
-    @staticmethod
-    def drop_tables():
-        """
-        Drop all tables from the database.
-        Only for unit_tests.
-        """
-        SqlStatements._sql_logger.debug('Dropping all tables')
-        queries = [
-            'drop table if exists user',
-            'drop table if exists user_has_word',
-            'drop table if exists word'
-        ]
-        for query in queries:
-            SqlStatements._execute_query(query, 'Dropped table', 'Failed to drop table')
 
     @staticmethod
     def create_tables():
@@ -131,7 +116,6 @@ class SqlStatements:
         Args:
             *words: Variable length argument list of words to add.
         """
-        SqlStatements._sql_logger.debug('Inserting words into the database')
         query = "insert or ignore into word values (:word);"
         for word in set(words):
             SqlStatements._execute_query(
@@ -149,7 +133,6 @@ class SqlStatements:
         Args:
             *user_ids: Variable length argument list of user IDs to add.
         """
-        SqlStatements._sql_logger.debug('Inserting all users to the database')
         query = "insert or ignore into user values (:user_id, 'user')"
         for user_id in set(user_ids):
             SqlStatements._execute_query(
@@ -167,8 +150,6 @@ class SqlStatements:
         Args:
             *user_ids (int): The IDs of the users to be granted admin permission.
         """
-        SqlStatements._sql_logger.debug('Adding admins')
-
         query = """update user
                 set permission = 'admin'
                 where id = :user_id;"""
@@ -180,8 +161,6 @@ class SqlStatements:
                 f'Failed to make {user_id} admin',
                 {'user_id': user_id}
             )
-
-        SqlStatements._sql_logger.debug('Admins added successfully')
 
     @staticmethod
     def add_user_has_word(user_id: int, word: str, count: int) -> None:
@@ -215,7 +194,6 @@ class SqlStatements:
             word (str): The word to be removed.
         """
         query = "delete from word where name = :word;"
-
         SqlStatements._execute_query(
             query,
             f'Removed word: {word} successfully',
@@ -235,12 +213,9 @@ class SqlStatements:
         Returns:
             int | None: The count of the word for the user, or None if an error occurred.
         """
-        SqlStatements._sql_logger.debug(f'Get count for user: {user_id} with word: {word}')
-
         query = """select count from user_has_word
                    where user_id = :user_id
                    and word_name = :word;"""
-
         count = SqlStatements._execute_query(
             query,
             f'Retrieved count for user: {user_id} with word: {word}',
@@ -249,7 +224,6 @@ class SqlStatements:
         )
         if not count:
             return None
-        SqlStatements._sql_logger.debug(count)
         return count[0][0]
 
     @staticmethod
@@ -260,8 +234,6 @@ class SqlStatements:
         Returns:
             List[str]: A list containing all words retrieved from the database.
         """
-        SqlStatements._sql_logger.debug('Get all words from database')
-
         words_database = [word[0] for word in SqlStatements._execute_query(
             """select * from word""",
             'Words retrieved successfully from the database',
@@ -278,8 +250,6 @@ class SqlStatements:
         Returns:
             List[int]: A list of user IDs retrieved from the database.
         """
-        SqlStatements._sql_logger.debug('Get all users from database')
-
         user_ids = SqlStatements._execute_query(
             """select id from user;""",
             'All user IDs successfully retrieved from the database',
@@ -306,7 +276,6 @@ class SqlStatements:
                 select max(count) from user_has_word
                 where word_name = :word
             )"""
-
         result = SqlStatements._execute_query(
             query,
             f'Got highest count for word {word}',
@@ -370,7 +339,6 @@ class SqlStatements:
         Returns:
             bool: True if the user has an association with the word, False otherwise.
         """
-        SqlStatements._sql_logger.debug('Check if user has association with word')
         query = """select exists (
                      select 1 from user_has_word
                      where user_id = :user_id
@@ -396,13 +364,12 @@ class SqlStatements:
         Returns:
             bool: True if the user has admin privileges, False otherwise.
         """
-        SqlStatements._sql_logger.debug(f'Check if user has admin privileges')
         query = """select permission from user
                 where id = :user_id"""
         permission = SqlStatements._execute_query(
             query,
-            f'Success in check_user_is_admin',
-            f'Error in check_user_is_admin',
+            f'user: {user_id} is admin',
+            f'user: {user_id} is no admin',
             {'user_id': user_id},
             fetch_one=True
         )
@@ -419,7 +386,6 @@ class SqlStatements:
         Returns:
             List[Tuple[str, int]]: A list of tuples containing words and their counts for the user.
         """
-        SqlStatements._sql_logger.debug(f'Get all words and counts for user: {user_id}')
         query = """
             select word_name, count from user_has_word
             where user_id = :user_id

@@ -2,7 +2,7 @@ import discord
 from discord import app_commands, Embed, Color
 import logging.config
 import yaml
-from config import LOGGING_CONFIG_PATH, BOT_CONFIG_PATH, LOG_FILE_PATH
+from config import LOGGING_CONFIG_PATH, BOT_CONFIG_PATH, LOG_FILE_PATH, ERROR_LOG_FILE_PATH
 import sql
 from collections import defaultdict
 from unidecode import unidecode
@@ -10,7 +10,8 @@ from unidecode import unidecode
 # Logging setup
 with open(LOGGING_CONFIG_PATH, 'r') as config_file:
     logging_config = yaml.safe_load(config_file)
-    logging_config['handlers']['file']['filename'] = str(LOG_FILE_PATH)
+    logging_config['handlers']['rotating_file']['filename'] = str(LOG_FILE_PATH)
+    logging_config['handlers']['error_file']['filename'] = str(ERROR_LOG_FILE_PATH)
     logging.config.dictConfig(logging_config)
 
 bot_logger = logging.getLogger('bot.main')
@@ -180,9 +181,9 @@ async def on_member_join(member: discord.Member):
         member (discord.Member): The member who joined the server.
     """
     bot_logger.info(f"{member} joined")
+    bot_logger.debug(f'Member ID: {member.id}')
     sql_statements.add_user_ids(member.id)
 
-    # Create embed for new user
     username = member.display_name 
     new_user_embed = Embed(
         title='A new victim',
@@ -193,7 +194,6 @@ async def on_member_join(member: discord.Member):
         text=', '.join(sql_statements.get_words())
     )
 
-    # Send embed to the designated channel
     await client.get_channel(channel_id).send(embed=new_user_embed)
 
     await client.scan(target_user_id=member.id)
@@ -220,9 +220,9 @@ async def on_message(message: discord.Message):
     for word in current_words:
         if word.lower() in words_in_message:
             await handle_word_count(message, word)
-            bot_logger.debug(f'Word "{word}" found in message')
+            bot_logger.info(f'Word: "{word}" found in message')
         else:
-            bot_logger.debug(f'Word "{word}" not found in message')
+            bot_logger.debug(f'Word: "{word}" not found in message')
 
 @client.tree.command(name="c", description="Count occurrences of a word for a specific user")
 @app_commands.describe(word="The word to count", user="The user to check")
@@ -236,7 +236,7 @@ async def count(interaction: discord.Interaction, word: str, user: discord.Membe
         user (discord.Member): The user to check.
     """
     await interaction.response.defer()
-    bot_logger.debug('Get count of user with word')
+    bot_logger.debug(f'Get count of user: {user.display_name} with word: {word}')
 
     converted_user_id = user.id
     count_user_id = sql_statements.get_count(converted_user_id, word)
@@ -264,7 +264,7 @@ async def count(interaction: discord.Interaction, word: str, user: discord.Membe
                                 f'{highest_count_user} with {highest_count_tuple[2]} times\n'
                                 f'Imagine 🐕 💦')
     await interaction.followup.send(embed=count_embed)
-    bot_logger.debug('Count message sent')
+    bot_logger.info('Count message sent')
 
 @client.tree.command(name="hc", description="Retrieve the highest count of a word")
 @app_commands.describe(word="The word to check")
@@ -277,7 +277,7 @@ async def highest_count(interaction: discord.Interaction, word: str):
         word (str): The word to check.
     """
     await interaction.response.defer()
-    bot_logger.debug('Get highest count of user from word')
+    bot_logger.debug(f'Get highest count of user from word: {word}')
     highest_count_tuple = sql_statements.get_highest_count_column(word)
 
     if highest_count_tuple is None:
@@ -290,6 +290,7 @@ async def highest_count(interaction: discord.Interaction, word: str):
         await interaction.followup.send(embed=no_count_embed)
         return
 
+    bot_logger.debug(f'Username: {highest_count_tuple[0]}')
     username = client.get_user(highest_count_tuple[0]).display_name
     highest_count_embed = Embed(
         title='Highest count from all Users',
@@ -322,6 +323,7 @@ async def total_highest_count_command(interaction: discord.Interaction):
         await interaction.followup.send(embed=no_count_embed)
         return
 
+    bot_logger.debug(f'Username: {highest_count_result[0]}')
     username = client.get_user(highest_count_result[0]).display_name 
     thc_embed = Embed(
         title='Highest count of all words',
@@ -365,11 +367,11 @@ async def add_word(interaction: discord.Interaction, word: str):
     """
 
     await interaction.response.defer()
-    bot_logger.debug('Add word to database')
+    bot_logger.debug(f'Add word: {word} to database')
 
     if sql_statements.check_user_is_admin(interaction.user.id):
         sql_statements.add_words(word)
-        await client.scan(target_word=word)  # Scan for the new word
+        await client.scan(target_word=word)
         bot_logger.info(f"Word '{word}' added and scanned")
 
         add_word_embed = Embed(
@@ -379,7 +381,7 @@ async def add_word(interaction: discord.Interaction, word: str):
             color=Color.green()
         )
         await interaction.followup.send(embed=add_word_embed)
-        bot_logger.debug('Message for adding word sent')
+        bot_logger.info('Message for adding word sent')
     else:
         await permission_abuse(interaction)
 
@@ -394,10 +396,11 @@ async def remove_word(interaction: discord.Interaction, word: str):
         word (str): The word to remove from the database.
     """
     await interaction.response.defer()
-    bot_logger.debug('Removing word from database')
+    bot_logger.debug(f'Removing word: {word} from database')
 
     if sql_statements.check_user_is_admin(interaction.user.id):
         sql_statements.remove_word(word)
+        bot_logger.debug(f'Word: {word} removed from database')
 
         remove_word_embed = Embed(
             title='Removed word',
@@ -441,25 +444,25 @@ async def help_command(interaction: discord.Interaction):
     bot_logger.info('Help message sent')
 
 @client.tree.command(name="uwc", description="Show all words and their counts for a specific user")
-@app_commands.describe(user="The user to check")
-async def user_word_counts(interaction: discord.Interaction, user: discord.Member):
+@app_commands.describe(member="The user to check")
+async def user_word_counts(interaction: discord.Interaction, member: discord.Member):
     """
     Show all words and their counts for a specific user.
 
     Args:
         interaction (discord.Interaction): The interaction object.
-        user (discord.Member): The user to check.
+        member (discord.Member): The user to check.
     """
     await interaction.response.defer()
-    bot_logger.debug('Get all words and counts for user')
+    bot_logger.debug(f'Get all words and counts for user: {member.id}')
 
-    user_id = user.id
+    user_id = member.id
     word_counts = sql_statements.get_user_word_counts(user_id)
 
     if not word_counts:
         no_words_embed = Embed(
-            title=f'{user.display_name} has no words',
-            description=f"{user.display_name} hasn't said any tracked words.",
+            title=f'{member.display_name} has no words',
+            description=f"{member.display_name} hasn't said any tracked words.",
             color=Color.red()
         )
         await interaction.followup.send(embed=no_words_embed)
@@ -468,12 +471,12 @@ async def user_word_counts(interaction: discord.Interaction, user: discord.Membe
     sorted_word_counts = sorted(word_counts, key=lambda x: x[1], reverse=True)
     words_description = "\n".join([f"{word}: {user_count}" for word, user_count in sorted_word_counts])
     user_words_embed = Embed(
-        title=f'Word counts for {user.display_name}',
+        title=f'Word counts for {member.display_name}',
         description=words_description,
         color=Color.blue()
     )
     await interaction.followup.send(embed=user_words_embed)
-    bot_logger.info(f'Word counts for {user.display_name} sent')
+    bot_logger.info(f'Word counts sent')
 
 async def handle_word_count(message: discord.Message, word: str):
     """

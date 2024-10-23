@@ -14,3 +14,7 @@ DB_PATH.parent.mkdir(parents=True, exist_ok=True)
 # Log file path
 LOG_FILE_PATH = BASE_DIR / 'logs' / 'bot.log'
 LOG_FILE_PATH.parent.mkdir(parents=True, exist_ok=True)
+
+# Error file path
+ERROR_LOG_FILE_PATH = BASE_DIR / 'logs' / 'error.log'
+ERROR_LOG_FILE_PATH.parent.mkdir(parents=True, exist_ok=True)

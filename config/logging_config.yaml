@@ -8,35 +8,45 @@ formatters:
     style: '{'
 
 handlers:
-  file:
-    class: logging.FileHandler
+  rotating_file:
+    class: logging.handlers.TimedRotatingFileHandler
     formatter: basic
-    filename: logger.log
+    filename: rotating_logger.log
+    when: W0
+    interval: 1
+    backupCount: 4
     encoding: utf-8
-    mode: w
 
   console:
     class: logging.StreamHandler
     formatter: basic
     stream: ext://sys.stdout
 
+  error_file:
+    class: logging.FileHandler
+    formatter: basic
+    filename: error_logger.log
+    encoding: utf-8
+    mode: w
+    level: ERROR
+
 loggers:
   discord:
     level: INFO
-    handlers: [file, console]
+    handlers: [rotating_file, console, error_file]
     propagate: no
 
   bot.main:
-    level: INFO
-    handlers: [file, console]
+    level: DEBUG
+    handlers: [rotating_file, console, error_file]
     propagate: no
 
   bot.sql:
-    level: INFO
-    handlers: [file, console]
+    level: DEBUG
+    handlers: [rotating_file, console, error_file]
     propagate: no
 
   bot.unittest:
     level: INFO
-    handlers: [file, console]
+    handlers: [rotating_file, console, error_file]
     propagate: no
