@@ -34,6 +34,11 @@ loggers:
     handlers: [rotating_file, console, error_file]
     propagate: no
 
+  bot:
+    level: DEBUG
+    handlers: [rotating_file, console, error_file]
+    propagate: no
+
   cogs.admin:
     level: DEBUG
     handlers: [rotating_file, console, error_file]
@@ -44,8 +49,13 @@ loggers:
     handlers: [rotating_file, console, error_file]
     propagate: no
 
+  cogs.events:
+    level: DEBUG
+    handlers: [rotating_file, console, error_file]
+    propagate: no
+
   bot.logic:
-    level: INFO
+    level: DEBUG
     handlers: [rotating_file, console, error_file]
     propagate: no
 

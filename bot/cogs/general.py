@@ -1,5 +1,4 @@
 import discord
-from discord import app_commands
 from discord.ext import commands
 from discord import Embed, Color
 import logging
@@ -18,8 +17,8 @@ class GeneralCommands(commands.Cog):
         """
         self.bot = bot
 
-    @app_commands.command(name="c", description="Count occurrences of a word for a specific user")
-    @app_commands.describe(word="The word to count", user="The user to check")
+    @commands.command(name="c", description="Count occurrences of a word for a specific user")
+    @commands.describe(word="The word to count", user="The user to check")
     async def count(self, interaction: discord.Interaction, word: str, user: discord.Member):
         """Counts occurrences of a word for a specific user.
 
@@ -59,8 +58,8 @@ class GeneralCommands(commands.Cog):
         await interaction.followup.send(embed=count_embed)
         bot_logger.info('Count message sent')
 
-    @app_commands.command(name="hc", description="Retrieve the highest count of a word")
-    @app_commands.describe(word="The word to check")
+    @commands.command(name="hc", description="Retrieve the highest count of a word")
+    @commands.describe(word="The word to check")
     async def highest_count(self, interaction: discord.Interaction, word: str):
         """Retrieves the highest count of a word across all users.
 
@@ -93,7 +92,7 @@ class GeneralCommands(commands.Cog):
         await interaction.followup.send(embed=highest_count_embed)
         bot_logger.info('Highest count message sent')
 
-    @app_commands.command(name="thc", description="Retrieve the total highest count of all words")
+    @commands.command(name="thc", description="Retrieve the total highest count of all words")
     async def total_highest_count_command(self, interaction: discord.Interaction):
         """Retrieves the total highest count of all words across all users.
 
@@ -125,7 +124,7 @@ class GeneralCommands(commands.Cog):
         await interaction.followup.send(embed=thc_embed)
         bot_logger.info('Message for total highest count sent')
 
-    @app_commands.command(name="sw", description="Show all tracked words")
+    @commands.command(name="sw", description="Show all tracked words")
     async def show_words(self, interaction: discord.Interaction):
         """Shows all tracked words in the database.
 
@@ -145,7 +144,7 @@ class GeneralCommands(commands.Cog):
         await interaction.followup.send(embed=words_embed)
         bot_logger.info('Message for all words sent')
 
-    @app_commands.command(name="h", description="Show bot usage instructions")
+    @commands.command(name="h", description="Show bot usage instructions")
     async def help_command(self, interaction: discord.Interaction):
         """Shows bot usage instructions.
 
@@ -174,8 +173,8 @@ class GeneralCommands(commands.Cog):
         await interaction.followup.send(embed=help_embed)
         bot_logger.info('Help message sent')
 
-    @app_commands.command(name="uwc", description="Show all words and their counts for a specific user")
-    @app_commands.describe(member="The user to check")
+    @commands.command(name="uwc", description="Show all words and their counts for a specific user")
+    @commands.describe(member="The user to check")
     async def user_word_counts(self, interaction: discord.Interaction, member: discord.Member):
         """Shows all words and their counts for a specific user.
 
@@ -207,3 +206,6 @@ class GeneralCommands(commands.Cog):
         )
         await interaction.followup.send(embed=user_words_embed)
         bot_logger.info(f'Word counts sent')
+
+def setup(bot):
+    bot.add_cog(GeneralCommands(bot))

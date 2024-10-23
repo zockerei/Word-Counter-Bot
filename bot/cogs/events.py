@@ -4,27 +4,30 @@ from discord import Color, Embed
 from unidecode import unidecode
 import logging
 import discord
+from config import load_bot_config
 
 events_logger = logging.getLogger('cogs.events')
 
 class Events(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
+        self.token, self.words, self.server_id, self.channel_id, self.admin_ids, self.disable_initial_scan = load_bot_config()
+        events_logger.debug('Events cog initialized')
 
     @commands.Cog.listener()
     async def on_ready(self):
         # Sync commands with a specific guild (server_id)
-        guild = discord.Object(id=server_id)
+        guild = discord.Object(id=self.server_id)
         self.bot.tree.copy_global_to(guild=guild)
         await self.bot.tree.sync(guild=guild)
         events_logger.info('Command tree synced with specific guild')
 
         queries.create_tables()
-        queries.add_words(*words)
-        queries.add_user_ids(*[member.id for member in self.bot.get_guild(server_id).members])
-        queries.add_admins(*admin_ids)
+        queries.add_words(*self.words)
+        queries.add_user_ids(*[member.id for member in self.bot.get_guild(self.server_id).members])
+        queries.add_admins(*self.admin_ids)
 
-        if not disable_initial_scan:
+        if not self.disable_initial_scan:
             await self.bot.scan()
         events_logger.info('Bot ready')
 
@@ -50,7 +53,7 @@ class Events(commands.Cog):
             text=', '.join(queries.get_words())
         )
 
-        await self.bot.get_channel(channel_id).send(embed=new_user_embed)
+        await self.bot.get_channel(self.channel_id).send(embed=new_user_embed)
 
         await self.bot.scan(target_user_id=member.id)
         events_logger.info('New user message sent')
@@ -79,3 +82,6 @@ class Events(commands.Cog):
                 events_logger.info(f'Word: "{word}" found in message')
             else:
                 events_logger.debug(f'Word: "{word}" not found in message')
+
+def setup(bot):
+    bot.add_cog(Events(bot))

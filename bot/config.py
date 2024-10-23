@@ -1,6 +1,7 @@
 from pathlib import Path
 import yaml
 import logging.config
+import os
 
 # Base directory of the project
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -12,7 +13,6 @@ CONFIG_FOLDER_PATH = BASE_DIR / 'config'
 
 # Database file path
 DB_PATH = 'sqlite:///' + str(BASE_DIR / 'instance' / 'word_counter.db')
-DB_PATH.mkdir(parents=True, exist_ok=True)
 
 # ENV file path
 ENV_PATH = BASE_DIR / 'instance' / '.env'
@@ -50,7 +50,8 @@ def load_bot_config():
         config = yaml.safe_load(config_file)
         bot_config = config
 
-    words, server_id, channel_id, admin_ids, disable_initial_scan = (
+    token, words, server_id, channel_id, admin_ids, disable_initial_scan = (
+        bot_config['token'],
         bot_config['words'],
         bot_config['server_id'], 
         bot_config['channel_id'],
@@ -58,4 +59,9 @@ def load_bot_config():
         bot_config.get('disable_initial_scan', True)
     )
 
-    return words, server_id, channel_id, admin_ids, disable_initial_scan
+    return token, words, server_id, channel_id, admin_ids, disable_initial_scan
+
+async def load_cogs(bot):
+    for filename in os.listdir(COG_FOLDER_PATH):
+        if filename.endswith('.py'):
+            await bot.load_extension(f'cogs.{filename[:-3]}')
