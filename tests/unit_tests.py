@@ -1,14 +1,7 @@
 import unittest
-import yaml
-import logging.config
-import sys
-from pathlib import Path
-
-project_root = Path(__file__).resolve().parent.parent
-sys.path.append(str(project_root / 'src'))
-
-from config import LOGGING_CONFIG_PATH, DB_PATH, LOG_FILE_PATH
-import sql as sql
+import logging
+from config.config import setup_logging
+import src.sql as sql
 
 
 class TestSqlModule(unittest.TestCase):
@@ -16,12 +9,8 @@ class TestSqlModule(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        # Logging setup
-        with open(LOGGING_CONFIG_PATH, 'r') as config_file:
-            logging_config = yaml.safe_load(config_file)
-            logging_config['handlers']['file']['filename'] = str(LOG_FILE_PATH)
-            logging.config.dictConfig(logging_config)
-
+        # Use the setup_logging function from config
+        setup_logging()
         cls._logger = logging.getLogger('bot.unittest')
         cls._logger.info('Logging config complete')
 

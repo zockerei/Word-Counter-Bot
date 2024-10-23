@@ -1,7 +1,7 @@
 import logging
 import sqlite3
 from typing import Optional, List, Tuple, Dict, Any
-from config import DB_PATH
+from config.config import DB_PATH
 
 
 class SqlStatements:
@@ -23,7 +23,6 @@ class SqlStatements:
             sqlite3.Error: If the connection to the database fails.
         """
         try:
-            SqlStatements._sql_logger.debug('Setting up sql connection')
             connection = sqlite3.connect(DB_PATH)
             return connection
         except sqlite3.Error as error:
@@ -106,6 +105,20 @@ class SqlStatements:
                 script,
                 f'{name.capitalize()} table created',
                 f'Failed to create {name} table'
+            )
+
+    @staticmethod
+    def drop_tables():
+        """
+        Drop tables from the database if they exist.
+        """
+        table_names = ["user_has_word", "word", "user"]
+        for table in table_names:
+            query = f"drop table if exists {table};"
+            SqlStatements._execute_query(
+                query,
+                f'{table.capitalize()} table dropped',
+                f'Failed to drop {table} table'
             )
 
     @staticmethod
