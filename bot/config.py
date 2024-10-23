@@ -10,11 +10,15 @@ LOG_FOLDER_PATH = BASE_DIR / 'logs'
 LOG_FOLDER_PATH.mkdir(parents=True, exist_ok=True)
 CONFIG_FOLDER_PATH = BASE_DIR / 'config'
 
-# Common settings
-DB_PATH = BASE_DIR / 'db' / 'word_counter.db'
+# Database file path
+DB_PATH = 'sqlite:///' + str(BASE_DIR / 'instance' / 'word_counter.db')
+DB_PATH.mkdir(parents=True, exist_ok=True)
 
-# Ensure the database directory exists
-DB_PATH.parent.mkdir(parents=True, exist_ok=True)
+# ENV file path
+ENV_PATH = BASE_DIR / 'instance' / '.env'
+
+# Cog folder path
+COG_FOLDER_PATH = BASE_DIR / 'bot' / 'cogs'
 
 # Function to load the logging configuration
 def setup_logging():
@@ -46,8 +50,7 @@ def load_bot_config():
         config = yaml.safe_load(config_file)
         bot_config = config
 
-    token, words, server_id, channel_id, admin_ids, disable_initial_scan = (
-        bot_config['token'],
+    words, server_id, channel_id, admin_ids, disable_initial_scan = (
         bot_config['words'],
         bot_config['server_id'], 
         bot_config['channel_id'],
@@ -55,4 +58,4 @@ def load_bot_config():
         bot_config.get('disable_initial_scan', True)
     )
 
-    return token, words, server_id, channel_id, admin_ids, disable_initial_scan
+    return words, server_id, channel_id, admin_ids, disable_initial_scan

@@ -28,7 +28,7 @@ if not exist venv (
 )
 
 :: Start the bot
-python src\main.py
+python bot\bot.py
 
 :: Keep the command prompt open
 pause
