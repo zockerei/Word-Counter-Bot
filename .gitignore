@@ -1,8 +1,6 @@
 __pycache__/
 .idea/
-build/
-bot.log
 db/
-main.spec
 config/config.txt
 venv/
+logs/
