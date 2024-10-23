@@ -1,21 +1,16 @@
 import discord
 from discord import app_commands, Embed, Color
 import logging.config
-import yaml
-from config import LOGGING_CONFIG_PATH, BOT_CONFIG_PATH, LOG_FILE_PATH, ERROR_LOG_FILE_PATH
+from config.config import setup_logging, load_bot_config
 import sql
 from collections import defaultdict
 from unidecode import unidecode
 
-# Logging setup
-with open(LOGGING_CONFIG_PATH, 'r') as config_file:
-    logging_config = yaml.safe_load(config_file)
-    logging_config['handlers']['rotating_file']['filename'] = str(LOG_FILE_PATH)
-    logging_config['handlers']['error_file']['filename'] = str(ERROR_LOG_FILE_PATH)
-    logging.config.dictConfig(logging_config)
-
+setup_logging()
 bot_logger = logging.getLogger('bot.main')
 bot_logger.info('Logging setup complete')
+
+token, words, server_id, channel_id, admin_ids, disable_initial_scan = load_bot_config()
 
 # Initialize SQL
 sql_statements = sql.SqlStatements()
@@ -24,22 +19,7 @@ sql_statements = sql.SqlStatements()
 intents = discord.Intents.default()
 intents.message_content = True
 intents.members = True
-bot_logger.debug(f'Intents setup complete: {intents}')
-
-# Load bot configuration
-with open(BOT_CONFIG_PATH, 'r') as config_file:
-    bot_config = yaml.safe_load(config_file)
-
-token, words, server_id, channel_id, admin_ids, disable_initial_scan = (
-    bot_config['token'],
-    bot_config['words'],
-    bot_config['server_id'], 
-    bot_config['channel_id'],
-    bot_config['admin_ids'],
-    bot_config.get('disable_initial_scan', False)
-)
-bot_logger.debug(f'{token} | {words} | {server_id} | {channel_id} | {admin_ids} | {disable_initial_scan}')
-bot_logger.info('bot_config loaded')
+bot_logger.info('Intents setup complete')
 
 class MyClient(discord.Client):
     """
