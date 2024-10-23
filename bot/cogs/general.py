@@ -2,11 +2,9 @@ import discord
 from discord.ext import commands
 from discord import Embed, Color
 import logging
-import db.queries as queries
-from unidecode import unidecode
+from bot.database import get_db
 
 bot_logger = logging.getLogger('cogs.general')
-sql_statements = queries.SqlStatements()
 
 class GeneralCommands(commands.Cog):
     def __init__(self, bot: commands.Bot):

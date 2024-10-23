@@ -2,7 +2,7 @@ import discord
 from discord import Embed, Color
 from discord.ext import commands
 import logging
-import db.queries as queries
+from bot.database import get_db
 from bot.bot import admin_ids
 
 bot_logger = logging.getLogger('cogs.admin')

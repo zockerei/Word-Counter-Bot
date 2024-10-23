@@ -1,6 +1,6 @@
 import logging
 from sqlalchemy.exc import SQLAlchemyError
-from db.models import User, Word, UserHasWord
+from models import User, Word, UserHasWord
 from typing import Optional, List, Tuple
 from bot.database import get_db
 

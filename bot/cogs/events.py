@@ -1,10 +1,9 @@
 from discord.ext import commands
-import db.queries as queries
+from bot.database import get_db
 from discord import Color, Embed
 from unidecode import unidecode
 import logging
 import discord
-from config import load_bot_config
 
 events_logger = logging.getLogger('cogs.events')
 
