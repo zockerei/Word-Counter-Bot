@@ -1,8 +1,8 @@
 import logging
 from sqlalchemy.exc import SQLAlchemyError
-from models import User, Word, UserHasWord
+from db.models import User, Word, UserHasWord
 from typing import Optional, List, Tuple
-from bot.database import get_db
+from db.database import get_db
 
 queries_logger = logging.getLogger('bot.queries')
 queries_logger.info('Logging setup complete')

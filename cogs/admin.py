@@ -1,28 +1,28 @@
 import discord
-from discord import Embed, Color
+from discord import Embed, Color, app_commands
 from discord.ext import commands
 import logging
-from bot.database import get_db
-from bot.bot import admin_ids
+from config import get_bot_config
+import db.queries as queries
+from logic import scan
 
 bot_logger = logging.getLogger('cogs.admin')
-sql_statements = queries.SqlStatements()
 
 class AdminCommands(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
+        self.config = get_bot_config()
 
-    @commands.command(name="aw", description="Add a word to the database (admin-only)")
-    @commands.describe(word="The word to add")
+    @app_commands.command(name="aw", description="Add a word to the database (admin-only)")
     async def add_word(self, interaction: discord.Interaction, word: str):
         """
         Add a word to the database (admin-only).
         """
         await interaction.response.defer()
 
-        if sql_statements.check_user_is_admin(interaction.user.id):
-            sql_statements.add_words(word)
-            await self.bot.scan(target_word=word)
+        if queries.check_user_is_admin(interaction.user.id):
+            queries.add_words(word)
+            await scan(self.config.server_id, target_word=word)
             bot_logger.info(f"Word '{word}' added and scanned")
 
             add_word_embed = Embed(
@@ -36,8 +36,7 @@ class AdminCommands(commands.Cog):
         else:
             await self.permission_abuse(interaction)
 
-    @commands.command(name="rw", description="Remove a word from the database (admin-only)")
-    @commands.describe(word="The word to remove")
+    @app_commands.command(name="rw", description="Remove a word from the database (admin-only)")
     async def remove_word(self, interaction: discord.Interaction, word: str):
         """
         Remove a word from the database (admin-only).
@@ -45,8 +44,8 @@ class AdminCommands(commands.Cog):
         await interaction.response.defer()
         bot_logger.debug(f'Removing word: {word} from database')
 
-        if sql_statements.check_user_is_admin(interaction.user.id):
-            sql_statements.remove_word(word)
+        if queries.check_user_is_admin(interaction.user.id):
+            queries.remove_word(word)
             bot_logger.debug(f'Word: {word} removed from database')
 
             remove_word_embed = Embed(
@@ -65,7 +64,7 @@ class AdminCommands(commands.Cog):
         Send a mod abuse message when a user without permissions attempts an admin action.
         """
         bot_logger.debug('Permission abuse')
-        admin_users = [self.bot.get_user(admin_id).display_name for admin_id in admin_ids]
+        admin_users = [self.bot.get_user(admin_id).display_name for admin_id in self.config.admin_ids]
         admin_list = ', '.join(admin_users)
         mod_abuse_embed = Embed(
             title='No permission',
@@ -76,5 +75,6 @@ class AdminCommands(commands.Cog):
         await interaction.followup.send(embed=mod_abuse_embed)
         bot_logger.info('Message for mod abuser sent')
 
-def setup(bot):
-    bot.add_cog(AdminCommands(bot))
+async def setup(bot):
+    await bot.add_cog(AdminCommands(bot))
+    bot_logger.debug('Admin commands loaded')

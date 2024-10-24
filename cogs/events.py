@@ -1,33 +1,34 @@
 from discord.ext import commands
-from bot.database import get_db
 from discord import Color, Embed
 from unidecode import unidecode
+import db.queries as queries
 import logging
 import discord
+from config import get_bot_config
+from logic import scan
 
 events_logger = logging.getLogger('cogs.events')
 
 class Events(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        self.token, self.words, self.server_id, self.channel_id, self.admin_ids, self.disable_initial_scan = load_bot_config()
+        self.config = get_bot_config()
         events_logger.debug('Events cog initialized')
 
     @commands.Cog.listener()
     async def on_ready(self):
-        # Sync commands with a specific guild (server_id)
-        guild = discord.Object(id=self.server_id)
+        guild = discord.Object(id=self.config.server_id)
         self.bot.tree.copy_global_to(guild=guild)
         await self.bot.tree.sync(guild=guild)
         events_logger.info('Command tree synced with specific guild')
 
-        queries.create_tables()
-        queries.add_words(*self.words)
-        queries.add_user_ids(*[member.id for member in self.bot.get_guild(self.server_id).members])
-        queries.add_admins(*self.admin_ids)
+        queries.add_words(*self.config.words)
+        queries.add_user_ids(*[member.id for member in self.bot.get_guild(self.config.server_id).members])
+        queries.add_admins(*self.config.admin_ids)
 
-        if not self.disable_initial_scan:
-            await self.bot.scan()
+        if not self.config.disable_initial_scan:
+            # Ensure scan is called with the correct parameters
+            await scan(server_id=self.config.server_id)
         events_logger.info('Bot ready')
 
     @commands.Cog.listener()
@@ -52,9 +53,9 @@ class Events(commands.Cog):
             text=', '.join(queries.get_words())
         )
 
-        await self.bot.get_channel(self.channel_id).send(embed=new_user_embed)
+        await self.bot.get_channel(self.config.channel_id).send(embed=new_user_embed)
 
-        await self.bot.scan(target_user_id=member.id)
+        await scan(self.config.server_id, target_user_id=member.id)
         events_logger.info('New user message sent')
 
     @commands.Cog.listener()
@@ -82,5 +83,6 @@ class Events(commands.Cog):
             else:
                 events_logger.debug(f'Word: "{word}" not found in message')
 
-def setup(bot):
-    bot.add_cog(Events(bot))
+async def setup(bot):
+    await bot.add_cog(Events(bot))
+    events_logger.debug('Events loaded')

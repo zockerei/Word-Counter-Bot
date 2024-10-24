@@ -1,9 +1,10 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
+from config import DB_PATH
 from db.models import Base
 
 # Create an engine that stores data in the specified database file.
-engine = create_engine('sqlite:///word_counter.db')
+engine = create_engine(DB_PATH)
 
 # Create all tables in the engine. This is equivalent to "Create Table" statements in raw SQL.
 Base.metadata.create_all(engine)
@@ -18,3 +19,4 @@ def get_db():
         yield db
     finally:
         db.close()
+        

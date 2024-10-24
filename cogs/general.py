@@ -1,8 +1,8 @@
 import discord
 from discord.ext import commands
-from discord import Embed, Color
+from discord import Embed, Color, app_commands
 import logging
-from bot.database import get_db
+import db.queries as queries
 
 bot_logger = logging.getLogger('cogs.general')
 
@@ -15,8 +15,7 @@ class GeneralCommands(commands.Cog):
         """
         self.bot = bot
 
-    @commands.command(name="c", description="Count occurrences of a word for a specific user")
-    @commands.describe(word="The word to count", user="The user to check")
+    @app_commands.command(name="c", description="Count occurrences of a word for a specific user")
     async def count(self, interaction: discord.Interaction, word: str, user: discord.Member):
         """Counts occurrences of a word for a specific user.
 
@@ -29,7 +28,7 @@ class GeneralCommands(commands.Cog):
         bot_logger.debug(f'Get count of user: {user.display_name} with word: {word}')
 
         converted_user_id = user.id
-        count_user_id = sql_statements.get_count(converted_user_id, word)
+        count_user_id = queries.get_count(converted_user_id, word)
         username = user.display_name 
 
         if count_user_id is None:
@@ -48,7 +47,7 @@ class GeneralCommands(commands.Cog):
             color=Color.blue()
         )
 
-        highest_count_tuple = sql_statements.get_highest_count_column(word)
+        highest_count_tuple = queries.get_highest_count_column(word)
         highest_count_user = self.bot.get_user(highest_count_tuple[0]).display_name 
         count_embed.set_footer(text=f'The person who has said {word} the most is '
                                     f'{highest_count_user} with {highest_count_tuple[2]} times\n'
@@ -56,8 +55,7 @@ class GeneralCommands(commands.Cog):
         await interaction.followup.send(embed=count_embed)
         bot_logger.info('Count message sent')
 
-    @commands.command(name="hc", description="Retrieve the highest count of a word")
-    @commands.describe(word="The word to check")
+    @app_commands.command(name="hc", description="Retrieve the highest count of a word")
     async def highest_count(self, interaction: discord.Interaction, word: str):
         """Retrieves the highest count of a word across all users.
 
@@ -67,7 +65,7 @@ class GeneralCommands(commands.Cog):
         """
         await interaction.response.defer()
         bot_logger.debug(f'Get highest count of user from word: {word}')
-        highest_count_tuple = sql_statements.get_highest_count_column(word)
+        highest_count_tuple = queries.get_highest_count_column(word)
 
         if highest_count_tuple is None:
             no_count_embed = Embed(
@@ -90,7 +88,7 @@ class GeneralCommands(commands.Cog):
         await interaction.followup.send(embed=highest_count_embed)
         bot_logger.info('Highest count message sent')
 
-    @commands.command(name="thc", description="Retrieve the total highest count of all words")
+    @app_commands.command(name="thc", description="Retrieve the total highest count of all words")
     async def total_highest_count_command(self, interaction: discord.Interaction):
         """Retrieves the total highest count of all words across all users.
 
@@ -99,7 +97,7 @@ class GeneralCommands(commands.Cog):
         """
         await interaction.response.defer()
         bot_logger.debug('Get user with highest amount of all words')
-        highest_count_result = sql_statements.get_total_highest_count_column()
+        highest_count_result = queries.get_total_highest_count_column()
 
         if highest_count_result is None:
             no_count_embed = Embed(
@@ -122,7 +120,7 @@ class GeneralCommands(commands.Cog):
         await interaction.followup.send(embed=thc_embed)
         bot_logger.info('Message for total highest count sent')
 
-    @commands.command(name="sw", description="Show all tracked words")
+    @app_commands.command(name="sw", description="Show all tracked words")
     async def show_words(self, interaction: discord.Interaction):
         """Shows all tracked words in the database.
 
@@ -131,7 +129,7 @@ class GeneralCommands(commands.Cog):
         """
         await interaction.response.defer()
         bot_logger.debug('Show all words from database')
-        words_database = sql_statements.get_words()
+        words_database = queries.get_words()
 
         words_embed = Embed(
             title='All words',
@@ -142,7 +140,7 @@ class GeneralCommands(commands.Cog):
         await interaction.followup.send(embed=words_embed)
         bot_logger.info('Message for all words sent')
 
-    @commands.command(name="h", description="Show bot usage instructions")
+    @app_commands.command(name="h", description="Show bot usage instructions")
     async def help_command(self, interaction: discord.Interaction):
         """Shows bot usage instructions.
 
@@ -171,8 +169,7 @@ class GeneralCommands(commands.Cog):
         await interaction.followup.send(embed=help_embed)
         bot_logger.info('Help message sent')
 
-    @commands.command(name="uwc", description="Show all words and their counts for a specific user")
-    @commands.describe(member="The user to check")
+    @app_commands.command(name="uwc", description="Show all words and their counts for a specific user")
     async def user_word_counts(self, interaction: discord.Interaction, member: discord.Member):
         """Shows all words and their counts for a specific user.
 
@@ -184,7 +181,7 @@ class GeneralCommands(commands.Cog):
         bot_logger.debug(f'Get all words and counts for user: {member.id}')
 
         user_id = member.id
-        word_counts = sql_statements.get_user_word_counts(user_id)
+        word_counts = queries.get_user_word_counts(user_id)
 
         if not word_counts:
             no_words_embed = Embed(
@@ -205,5 +202,6 @@ class GeneralCommands(commands.Cog):
         await interaction.followup.send(embed=user_words_embed)
         bot_logger.info(f'Word counts sent')
 
-def setup(bot):
-    bot.add_cog(GeneralCommands(bot))
+async def setup(bot):
+    await bot.add_cog(GeneralCommands(bot))
+    bot_logger.debug('General commands loaded')
