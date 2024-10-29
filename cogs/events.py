@@ -101,13 +101,50 @@ class Events(commands.Cog):
         events_logger.debug(f'Processing message from {message.author.display_name} (ID: {message.author.id})')
 
         current_words = queries.get_words()
-        words_in_message = formatted_content.split()
         for word in current_words:
-            if word.lower() in words_in_message:
+            if word.lower() in formatted_content:
                 await self.handle_word_count(message, word)
                 events_logger.info(f'Tracked word "{word}" found in message from {message.author.display_name}')
             else:
                 events_logger.debug(f'Word: "{word}" not found in message')
+
+    async def handle_word_count(self, message: discord.Message, word: str):
+        """
+        Handle word count in a message.
+
+        This function updates the count for a word said by a user and sends a notification
+        if it's the first time the user has said the word.
+
+        Args:
+            message (discord.Message): The message containing the word.
+            word (str): The word to count in the message.
+        """
+        events_logger.debug(f'Word: {word} found in message')
+
+        # Use the same formatting as in on_message
+        formatted_content = unidecode(message.content).lower()
+
+        # Count occurrences using string count instead of split
+        word_count = formatted_content.count(word.lower())
+        user_id = message.author.id
+
+        if queries.get_count(user_id, word) is None:
+            events_logger.debug(f'First time {user_id} has said {word}')
+            queries.update_user_count(user_id, word, word_count)
+
+            username = message.author.display_name
+
+            first_time_embed = Embed(
+                title='First time 😩',
+                description=f"""{username} was a naughty boy and said {word}\n
+                His first time... 💦""",
+                color=Color.red()
+            )
+            await message.channel.send(embed=first_time_embed)
+            events_logger.info(f'First time message sent: {username}, {word}')
+            return
+
+        queries.update_user_count(user_id, word, word_count)
 
 
 async def setup(bot):

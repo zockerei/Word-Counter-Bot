@@ -34,7 +34,7 @@ async def scan(bot, server_id, word_counts=None, target_user_id=None, target_wor
     logic_logger.info(f"Scan completed - Total messages: {total_messages_scanned}, Words tracked: {len(word_counts)}")
 
 
-async def scan_channel(channel, word_counts, target_user_id=None, target_word=None):
+async def scan_channel(channel, word_counts, target_user_id=None, target_word=None) -> int:
     """
     Scans a channel and its threads for word occurrences.
 
@@ -63,7 +63,7 @@ async def scan_channel(channel, word_counts, target_user_id=None, target_word=No
     return messages_scanned
 
 
-async def scan_messages(channel, word_counts, target_user_id=None, target_word=None):
+async def scan_messages(channel, word_counts, target_user_id=None, target_word=None) -> int:
     """
     Scans messages in a channel or thread for word occurrences.
 
