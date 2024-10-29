@@ -18,12 +18,21 @@ COG_FOLDER_PATH = BASE_DIR / 'cogs'
 
 
 def setup_logging():
-    """Setup logging configuration"""
+    """
+    Sets up the logging configuration for the application.
+
+    Reads the logging configuration from a YAML file and applies it.
+    Updates the log file paths for rotating and error logs.
+
+    Raises:
+        FileNotFoundError: If the logging configuration file is not found.
+        yaml.YAMLError: If there is an error parsing the YAML file.
+        Exception: For any other unexpected errors.
+    """
     try:
         with open(CONFIG_FOLDER_PATH / 'logging_config.yaml', 'r') as file:
             config = yaml.safe_load(file.read())
 
-        # Update log file paths
         config['handlers']['rotating_file']['filename'] = str(LOG_FOLDER_PATH / 'bot.log')
         config['handlers']['error_file']['filename'] = str(LOG_FOLDER_PATH / 'errors.log')
 
@@ -37,17 +46,41 @@ def setup_logging():
 
 
 class BotConfig:
-    """Singleton class to load and provide bot configuration."""
+    """
+    Singleton class to load and provide bot configuration.
+
+    Attributes:
+        token (str): The bot token.
+        words (list): A list of words to track.
+        server_id (int): The ID of the server.
+        channel_id (int): The ID of the channel.
+        admin_ids (list): A list of admin user IDs.
+        disable_initial_scan (bool): Flag to disable initial scan.
+    """
+
     _instance = None
 
     def __new__(cls):
+        """
+        Creates a new instance of BotConfig if it doesn't exist.
+
+        Returns:
+            BotConfig: The singleton instance of BotConfig.
+        """
         if cls._instance is None:
             cls._instance = super(BotConfig, cls).__new__(cls)
             cls._instance._load_config()
         return cls._instance
 
     def _load_config(self):
-        """Load configuration from YAML file."""
+        """
+        Loads configuration from a YAML file.
+
+        Raises:
+            FileNotFoundError: If the bot configuration file is not found.
+            yaml.YAMLError: If there is an error parsing the YAML file.
+            Exception: For any other unexpected errors.
+        """
         try:
             with open(CONFIG_FOLDER_PATH / 'bot_config.yaml', 'r') as config_file:
                 config = yaml.safe_load(config_file)
@@ -66,5 +99,10 @@ class BotConfig:
 
 
 def get_bot_config():
-    """Get the singleton instance of BotConfig."""
+    """
+    Gets the singleton instance of BotConfig.
+
+    Returns:
+        BotConfig: The singleton instance of BotConfig.
+    """
     return BotConfig()

@@ -3,18 +3,27 @@ from sqlalchemy.orm import sessionmaker
 from config import DB_PATH
 from db.models import Base
 
-# Create an engine that stores data in the specified database file.
 engine = create_engine(DB_PATH)
 
-# Create all tables in the engine. This is equivalent to "Create Table" statements in raw SQL.
 Base.metadata.create_all(engine)
 
-# Bind the engine to the sessionmaker
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 
 def get_db():
-    """Dependency to get the database session."""
+    """
+    Provides a database session for use in database operations.
+
+    This function is a dependency that yields a database session.
+    It ensures that the session is properly closed after use.
+
+    Yields:
+        Session: A SQLAlchemy database session.
+
+    Example:
+        with get_db() as db:
+            # perform database operations
+    """
     db = SessionLocal()
     try:
         yield db

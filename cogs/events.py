@@ -28,8 +28,9 @@ class Events(commands.Cog):
         queries.add_admins(*self.config.admin_ids)
 
         if not self.config.disable_initial_scan:
-            # Ensure scan is called with the correct parameters
-            await scan(server_id=self.config.server_id)
+            await scan(self.bot, self.config.server_id)
+            events_logger.info('Initial scan completed')
+
         events_logger.info('Bot ready')
 
     @commands.Cog.listener()

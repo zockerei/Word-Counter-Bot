@@ -30,7 +30,7 @@ class GeneralCommands(commands.Cog):
 
         converted_user_id = user.id
         count_user_id = queries.get_count(converted_user_id, word)
-        username = user.display_name 
+        username = user.display_name
 
         if count_user_id is None:
             zero_count_embed = Embed(

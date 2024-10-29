@@ -9,14 +9,30 @@ queries_logger.info('Logging setup complete')
 
 
 class DatabaseError(Exception):
+    """
+    Custom exception for database-related errors.
+
+    Attributes:
+        message (str): The error message.
+        original_exception (Exception, optional): The original exception that caused this error.
+    """
+
     def __init__(self, message: str, original_exception: Optional[Exception] = None):
+        """
+        Initializes the DatabaseError with a message and an optional original exception.
+
+        Args:
+            message (str): The error message.
+            original_exception (Exception, optional): The original exception that caused this error.
+        """
         self.message = message
         self.original_exception = original_exception
         super().__init__(self.message)
 
 
 def drop_tables():
-    """Drops tables from the database if they exist.
+    """
+    Drops tables from the database if they exist.
 
     Raises:
         DatabaseError: If there is an error dropping the tables.
@@ -33,7 +49,8 @@ def drop_tables():
 
 
 def add_words(*words):
-    """Adds words to the database if they don't exist.
+    """
+    Adds words to the database if they don't exist.
 
     Args:
         *words: A variable number of word strings to add.
@@ -54,7 +71,8 @@ def add_words(*words):
 
 
 def add_user_ids(*user_ids):
-    """Adds user IDs to the database if they don't exist.
+    """
+    Adds user IDs to the database if they don't exist.
 
     Args:
         *user_ids: A variable number of user ID integers to add.
@@ -75,7 +93,8 @@ def add_user_ids(*user_ids):
 
 
 def add_admins(*user_ids: int) -> None:
-    """Adds admin permission to the specified user IDs.
+    """
+    Adds admin permission to the specified user IDs.
 
     Args:
         *user_ids: A variable number of user ID integers to promote to admin.
@@ -98,12 +117,13 @@ def add_admins(*user_ids: int) -> None:
 
 
 def add_user_has_word(user_id: int, word: str, count: int) -> None:
-    """Inserts a new user_has_word record.
+    """
+    Inserts a new user_has_word record.
 
     Args:
-        user_id: The ID of the user.
-        word: The word associated with the user.
-        count: The count of the word for the user.
+        user_id (int): The ID of the user.
+        word (str): The word associated with the user.
+        count (int): The count of the word for the user.
 
     Raises:
         DatabaseError: If there is an error inserting the record.
@@ -121,10 +141,11 @@ def add_user_has_word(user_id: int, word: str, count: int) -> None:
 
 
 def remove_word(word: str) -> None:
-    """Removes a word from the database.
+    """
+    Removes a word from the database.
 
     Args:
-        word: The word to remove.
+        word (str): The word to remove.
 
     Raises:
         DatabaseError: If there is an error removing the word.
@@ -143,14 +164,15 @@ def remove_word(word: str) -> None:
 
 
 def get_count(user_id: int, word: str) -> Optional[int]:
-    """Gets the count for a specific user ID and word.
+    """
+    Gets the count for a specific user ID and word.
 
     Args:
-        user_id: The ID of the user.
-        word: The word to get the count for.
+        user_id (int): The ID of the user.
+        word (str): The word to get the count for.
 
     Returns:
-        The count of the word for the user, or None if not found.
+        Optional[int]: The count of the word for the user, or None if not found.
 
     Raises:
         DatabaseError: If there is an error retrieving the count.
@@ -165,10 +187,11 @@ def get_count(user_id: int, word: str) -> Optional[int]:
 
 
 def get_words() -> List[str]:
-    """Gets all words from the database.
+    """
+    Gets all words from the database.
 
     Returns:
-        A list of all words in the database.
+        List[str]: A list of all words in the database.
 
     Raises:
         DatabaseError: If there is an error retrieving the words.
@@ -183,10 +206,11 @@ def get_words() -> List[str]:
 
 
 def get_all_users() -> List[int]:
-    """Gets all user IDs from the database.
+    """
+    Gets all user IDs from the database.
 
     Returns:
-        A list of all user IDs in the database.
+        List[int]: A list of all user IDs in the database.
 
     Raises:
         DatabaseError: If there is an error retrieving the user IDs.
@@ -201,13 +225,14 @@ def get_all_users() -> List[int]:
 
 
 def get_highest_count_column(word: str) -> Optional[Tuple]:
-    """Gets the user with the highest count for a specific word.
+    """
+    Gets the user with the highest count for a specific word.
 
     Args:
-        word: The word to find the highest count for.
+        word (str): The word to find the highest count for.
 
     Returns:
-        A tuple of (user_id, word_name, count) for the user with the highest count, or None if not found.
+        Optional[Tuple]: A tuple of (user_id, word_name, count) for the user with the highest count, or None if not found.
 
     Raises:
         DatabaseError: If there is an error retrieving the highest count.
@@ -222,10 +247,11 @@ def get_highest_count_column(word: str) -> Optional[Tuple]:
 
 
 def get_total_highest_count_column() -> Optional[Tuple]:
-    """Gets the column with the highest count from the user_has_word table.
+    """
+    Gets the column with the highest count from the user_has_word table.
 
     Returns:
-        A tuple of (user_id, word_name, count) for the highest count, or None if not found.
+        Optional[Tuple]: A tuple of (user_id, word_name, count) for the highest count, or None if not found.
 
     Raises:
         DatabaseError: If there is an error retrieving the highest count column.
@@ -240,12 +266,13 @@ def get_total_highest_count_column() -> Optional[Tuple]:
 
 
 def update_user_count(user_id: int, word: str, count: int) -> None:
-    """Updates the user count for a specific word.
+    """
+    Updates the user count for a specific word.
 
     Args:
-        user_id: The ID of the user.
-        word: The word to update the count for.
-        count: The count to add to the existing count.
+        user_id (int): The ID of the user.
+        word (str): The word to update the count for.
+        count (int): The count to add to the existing count.
 
     Raises:
         DatabaseError: If there is an error updating the count.
@@ -267,14 +294,15 @@ def update_user_count(user_id: int, word: str, count: int) -> None:
 
 
 def check_user_has_word(user_id: int, word: str) -> bool:
-    """Checks if a user has an association with a specific word.
+    """
+    Checks if a user has an association with a specific word.
 
     Args:
-        user_id: The ID of the user.
-        word: The word to check association for.
+        user_id (int): The ID of the user.
+        word (str): The word to check association for.
 
     Returns:
-        True if the user has the word, False otherwise.
+        bool: True if the user has the word, False otherwise.
 
     Raises:
         DatabaseError: If there is an error checking the association.
@@ -289,13 +317,14 @@ def check_user_has_word(user_id: int, word: str) -> bool:
 
 
 def check_user_is_admin(user_id: int) -> bool:
-    """Checks if a user has admin privileges.
+    """
+    Checks if a user has admin privileges.
 
     Args:
-        user_id: The ID of the user.
+        user_id (int): The ID of the user.
 
     Returns:
-        True if the user is an admin, False otherwise.
+        bool: True if the user is an admin, False otherwise.
 
     Raises:
         DatabaseError: If there is an error checking admin status.
@@ -310,13 +339,14 @@ def check_user_is_admin(user_id: int) -> bool:
 
 
 def get_user_word_counts(user_id: int) -> List[Tuple[str, int]]:
-    """Gets all words and their counts for a specific user.
+    """
+    Gets all words and their counts for a specific user.
 
     Args:
-        user_id: The ID of the user.
+        user_id (int): The ID of the user.
 
     Returns:
-        A list of tuples containing (word_name, count) for each word associated with the user.
+        List[Tuple[str, int]]: A list of tuples containing (word_name, count) for each word associated with the user.
 
     Raises:
         DatabaseError: If there is an error retrieving the user's word counts.
