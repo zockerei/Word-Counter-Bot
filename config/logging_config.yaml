@@ -70,7 +70,7 @@ loggers:
     handlers: [rotating_file, error_file, console]
     propagate: no
 
-  bot.unittest:
-    level: INFO
+  tests.queries:
+    level: DEBUG
     handlers: [rotating_file, error_file, console]
     propagate: no
