@@ -8,6 +8,7 @@ from logic import scan
 
 bot_logger = logging.getLogger('cogs.admin')
 
+
 class AdminCommands(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
@@ -74,6 +75,7 @@ class AdminCommands(commands.Cog):
         )
         await interaction.followup.send(embed=mod_abuse_embed)
         bot_logger.info('Message for mod abuser sent')
+
 
 async def setup(bot):
     await bot.add_cog(AdminCommands(bot))

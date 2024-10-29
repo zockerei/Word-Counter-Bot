@@ -12,6 +12,7 @@ Base.metadata.create_all(engine)
 # Bind the engine to the sessionmaker
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
+
 def get_db():
     """Dependency to get the database session."""
     db = SessionLocal()
@@ -19,4 +20,3 @@ def get_db():
         yield db
     finally:
         db.close()
-        

@@ -6,6 +6,7 @@ import db.queries as queries
 
 bot_logger = logging.getLogger('cogs.general')
 
+
 class GeneralCommands(commands.Cog):
     def __init__(self, bot: commands.Bot):
         """Initializes the GeneralCommands cog.
@@ -48,10 +49,10 @@ class GeneralCommands(commands.Cog):
         )
 
         highest_count_tuple = queries.get_highest_count_column(word)
-        highest_count_user = self.bot.get_user(highest_count_tuple[0]).display_name 
-        count_embed.set_footer(text=f'The person who has said {word} the most is '
-                                    f'{highest_count_user} with {highest_count_tuple[2]} times\n'
-                                    f'Imagine 🐕 💦')
+        highest_count_user = self.bot.get_user(highest_count_tuple[0]).display_name
+        count_embed.set_footer(text=f"""The person who has said {word} the most is
+                                    {highest_count_user} with {highest_count_tuple[2]} times
+                                    Imagine 🐕 💦""")
         await interaction.followup.send(embed=count_embed)
         bot_logger.info('Count message sent')
 
@@ -102,7 +103,7 @@ class GeneralCommands(commands.Cog):
         if highest_count_result is None:
             no_count_embed = Embed(
                 title='Dead Server',
-                description=f"""No User in this Server has said any word...\n
+                description="""No User in this Server has said any word...\n
                 Or they tricked the system (not hard)""",
                 color=Color.red()
             )
@@ -110,7 +111,7 @@ class GeneralCommands(commands.Cog):
             return
 
         bot_logger.debug(f'Username: {highest_count_result[0]}')
-        username = self.bot.get_user(highest_count_result[0]).display_name 
+        username = self.bot.get_user(highest_count_result[0]).display_name
         thc_embed = Embed(
             title='Highest count of all words',
             description=f"""The winner for the Highest count of all words is... {username}!\n
@@ -152,7 +153,7 @@ class GeneralCommands(commands.Cog):
         help_embed = Embed(
             title='Word Counter Bot Help',
             description="""Here are the available commands:
-            
+
             /c [word] [user]: Count occurrences of a word for a specific user.
             /hc [word]: Retrieve the highest count of a word.
             /thc: Retrieve the total highest count of all words.
@@ -165,7 +166,7 @@ class GeneralCommands(commands.Cog):
         ).set_footer(
             text="Use these commands wisely!"
         )
-        
+
         await interaction.followup.send(embed=help_embed)
         bot_logger.info('Help message sent')
 
@@ -200,7 +201,8 @@ class GeneralCommands(commands.Cog):
             color=Color.blue()
         )
         await interaction.followup.send(embed=user_words_embed)
-        bot_logger.info(f'Word counts sent')
+        bot_logger.info('Word counts sent')
+
 
 async def setup(bot):
     await bot.add_cog(GeneralCommands(bot))

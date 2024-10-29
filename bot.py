@@ -5,6 +5,7 @@ from discord.ext import commands
 import os
 import asyncio
 
+
 async def main():
     for filename in os.listdir(COG_FOLDER_PATH):
         if filename.endswith('.py'):

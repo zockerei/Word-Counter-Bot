@@ -16,6 +16,7 @@ DB_PATH = 'sqlite:///' + str(BASE_DIR / 'instance' / 'word_counter.db')
 # Cog folder path
 COG_FOLDER_PATH = BASE_DIR / 'cogs'
 
+
 def setup_logging():
     """Setup logging configuration"""
     try:
@@ -33,6 +34,7 @@ def setup_logging():
         logging.error(f"Error parsing YAML file: {e}")
     except Exception as e:
         logging.error(f"Unexpected error in Logging Configuration: {e}")
+
 
 class BotConfig:
     """Singleton class to load and provide bot configuration."""
@@ -61,6 +63,7 @@ class BotConfig:
             logging.error(f"Error parsing YAML file: {e}")
         except Exception as e:
             logging.error(f"Unexpected error in Bot Configuration: {e}")
+
 
 def get_bot_config():
     """Get the singleton instance of BotConfig."""

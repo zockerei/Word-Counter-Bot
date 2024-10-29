@@ -7,11 +7,13 @@ from db.database import get_db
 queries_logger = logging.getLogger('bot.queries')
 queries_logger.info('Logging setup complete')
 
+
 class DatabaseError(Exception):
     def __init__(self, message: str, original_exception: Optional[Exception] = None):
         self.message = message
         self.original_exception = original_exception
         super().__init__(self.message)
+
 
 def drop_tables():
     """Drops tables from the database if they exist.
@@ -28,6 +30,7 @@ def drop_tables():
     except SQLAlchemyError as e:
         queries_logger.error(f'Failed to drop tables: {e}')
         raise DatabaseError('Failed to drop tables', e)
+
 
 def add_words(*words):
     """Adds words to the database if they don't exist.
@@ -49,6 +52,7 @@ def add_words(*words):
         queries_logger.error(f'Error inserting words: {e}')
         raise DatabaseError('Error inserting words', e)
 
+
 def add_user_ids(*user_ids):
     """Adds user IDs to the database if they don't exist.
 
@@ -68,6 +72,7 @@ def add_user_ids(*user_ids):
         session.rollback()
         queries_logger.error(f'Error inserting user IDs: {e}')
         raise DatabaseError('Error inserting user IDs', e)
+
 
 def add_admins(*user_ids: int) -> None:
     """Adds admin permission to the specified user IDs.
@@ -91,6 +96,7 @@ def add_admins(*user_ids: int) -> None:
         queries_logger.error(f'Failed to make users admin: {e}')
         raise DatabaseError('Failed to make users admin', e)
 
+
 def add_user_has_word(user_id: int, word: str, count: int) -> None:
     """Inserts a new user_has_word record.
 
@@ -113,6 +119,7 @@ def add_user_has_word(user_id: int, word: str, count: int) -> None:
         queries_logger.error(f'Error inserting user_has_word record: {e}')
         raise DatabaseError('Error inserting user_has_word record', e)
 
+
 def remove_word(word: str) -> None:
     """Removes a word from the database.
 
@@ -133,6 +140,7 @@ def remove_word(word: str) -> None:
         session.rollback()
         queries_logger.error(f'Error removing word: {e}')
         raise DatabaseError('Error removing word', e)
+
 
 def get_count(user_id: int, word: str) -> Optional[int]:
     """Gets the count for a specific user ID and word.
@@ -155,6 +163,7 @@ def get_count(user_id: int, word: str) -> Optional[int]:
         queries_logger.error(f'Error getting count for user: {user_id} with word: {word}: {e}')
         raise DatabaseError('Error getting count', e)
 
+
 def get_words() -> List[str]:
     """Gets all words from the database.
 
@@ -172,6 +181,7 @@ def get_words() -> List[str]:
         queries_logger.error(f'Error retrieving words from the database: {e}')
         raise DatabaseError('Error retrieving words', e)
 
+
 def get_all_users() -> List[int]:
     """Gets all user IDs from the database.
 
@@ -188,6 +198,7 @@ def get_all_users() -> List[int]:
     except SQLAlchemyError as e:
         queries_logger.error(f'Error getting all users: {e}')
         raise DatabaseError('Error getting all users', e)
+
 
 def get_highest_count_column(word: str) -> Optional[Tuple]:
     """Gets the user with the highest count for a specific word.
@@ -209,6 +220,7 @@ def get_highest_count_column(word: str) -> Optional[Tuple]:
         queries_logger.error(f'Error while getting highest count for word {word}: {e}')
         raise DatabaseError('Error getting highest count', e)
 
+
 def get_total_highest_count_column() -> Optional[Tuple]:
     """Gets the column with the highest count from the user_has_word table.
 
@@ -225,6 +237,7 @@ def get_total_highest_count_column() -> Optional[Tuple]:
     except SQLAlchemyError as e:
         queries_logger.error(f'Error getting highest count column: {e}')
         raise DatabaseError('Error getting highest count column', e)
+
 
 def update_user_count(user_id: int, word: str, count: int) -> None:
     """Updates the user count for a specific word.
@@ -252,6 +265,7 @@ def update_user_count(user_id: int, word: str, count: int) -> None:
         queries_logger.error(f'Error updating count for user: {user_id} with word: {word}: {e}')
         raise DatabaseError('Error updating count', e)
 
+
 def check_user_has_word(user_id: int, word: str) -> bool:
     """Checks if a user has an association with a specific word.
 
@@ -273,6 +287,7 @@ def check_user_has_word(user_id: int, word: str) -> bool:
         queries_logger.error(f'Error in check_user_has_word: {e}')
         raise DatabaseError('Error checking user-word association', e)
 
+
 def check_user_is_admin(user_id: int) -> bool:
     """Checks if a user has admin privileges.
 
@@ -292,6 +307,7 @@ def check_user_is_admin(user_id: int) -> bool:
     except SQLAlchemyError as e:
         queries_logger.error(f'Error checking if user is admin: {e}')
         raise DatabaseError('Error checking admin status', e)
+
 
 def get_user_word_counts(user_id: int) -> List[Tuple[str, int]]:
     """Gets all words and their counts for a specific user.

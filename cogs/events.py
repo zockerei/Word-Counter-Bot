@@ -9,6 +9,7 @@ from logic import scan
 
 events_logger = logging.getLogger('cogs.events')
 
+
 class Events(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
@@ -43,7 +44,7 @@ class Events(commands.Cog):
         events_logger.debug(f'Member ID: {member.id}')
         queries.add_user_ids(member.id)
 
-        username = member.display_name 
+        username = member.display_name
         new_user_embed = Embed(
             title='A new victim',
             description=f"""A new victim joined the Server\n
@@ -82,6 +83,7 @@ class Events(commands.Cog):
                 events_logger.info(f'Word: "{word}" found in message')
             else:
                 events_logger.debug(f'Word: "{word}" not found in message')
+
 
 async def setup(bot):
     await bot.add_cog(Events(bot))
