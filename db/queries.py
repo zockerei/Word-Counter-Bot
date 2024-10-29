@@ -180,7 +180,9 @@ def get_count(user_id: int, word: str) -> Optional[int]:
     try:
         with next(get_db()) as session:
             user_has_word = session.query(UserHasWord).filter_by(user_id=user_id, word_name=word).first()
-            return user_has_word.count if user_has_word else None
+            result = user_has_word.count if user_has_word else None
+            queries_logger.debug(f'get_count result for user {user_id}, word {word}: {result}')
+            return result
     except SQLAlchemyError as e:
         queries_logger.error(f'Error getting count for user: {user_id} with word: {word}: {e}')
         raise DatabaseError('Error getting count', e)
@@ -199,7 +201,9 @@ def get_words() -> List[str]:
     try:
         with next(get_db()) as session:
             words = session.query(Word.name).all()
-            return [word.name for word in words]
+            result = [word.name for word in words]
+            queries_logger.debug(f'get_words result: {result}')
+            return result
     except SQLAlchemyError as e:
         queries_logger.error(f'Error retrieving words from the database: {e}')
         raise DatabaseError('Error retrieving words', e)
@@ -218,7 +222,9 @@ def get_all_users() -> List[int]:
     try:
         with next(get_db()) as session:
             users = session.query(User.id).all()
-            return [user.id for user in users]
+            result = [user.id for user in users]
+            queries_logger.debug(f'get_all_users result: {result}')
+            return result
     except SQLAlchemyError as e:
         queries_logger.error(f'Error getting all users: {e}')
         raise DatabaseError('Error getting all users', e)
@@ -241,7 +247,9 @@ def get_highest_count_column(word: str) -> Optional[Tuple]:
     try:
         with next(get_db()) as session:
             result = session.query(UserHasWord).filter_by(word_name=word).order_by(UserHasWord.count.desc()).first()
-            return (result.user_id, result.word_name, result.count) if result else None
+            tuple_result = (result.user_id, result.word_name, result.count) if result else None
+            queries_logger.debug(f'get_highest_count_column result for word {word}: {tuple_result}')
+            return tuple_result
     except SQLAlchemyError as e:
         queries_logger.error(f'Error while getting highest count for word {word}: {e}')
         raise DatabaseError('Error getting highest count', e)
@@ -260,7 +268,9 @@ def get_total_highest_count_column() -> Optional[Tuple]:
     try:
         with next(get_db()) as session:
             result = session.query(UserHasWord).order_by(UserHasWord.count.desc()).first()
-            return (result.user_id, result.word_name, result.count) if result else None
+            tuple_result = (result.user_id, result.word_name, result.count) if result else None
+            queries_logger.debug(f'get_total_highest_count_column result: {tuple_result}')
+            return tuple_result
     except SQLAlchemyError as e:
         queries_logger.error(f'Error getting highest count column: {e}')
         raise DatabaseError('Error getting highest count column', e)
@@ -287,7 +297,7 @@ def update_user_count(user_id: int, word: str, count: int) -> None:
                 user_has_word = UserHasWord(user_id=user_id, word_name=word, count=count)
                 session.add(user_has_word)
             session.commit()
-            queries_logger.info(f'Updated count for user: {user_id} with word: {word}')
+            queries_logger.info(f'Updated count for user: {user_id} with word: {word} to {count}')
     except SQLAlchemyError as e:
         session.rollback()
         queries_logger.error(f'Error updating count for user: {user_id} with word: {word}: {e}')
@@ -311,6 +321,7 @@ def check_user_has_word(user_id: int, word: str) -> bool:
     try:
         with next(get_db()) as session:
             exists = session.query(UserHasWord).filter_by(user_id=user_id, word_name=word).first() is not None
+            queries_logger.debug(f'check_user_has_word result for user {user_id}, word {word}: {exists}')
             return exists
     except SQLAlchemyError as e:
         queries_logger.error(f'Error in check_user_has_word: {e}')
@@ -333,7 +344,9 @@ def check_user_is_admin(user_id: int) -> bool:
     try:
         with next(get_db()) as session:
             user = session.query(User).filter_by(id=user_id).first()
-            return user.permission == 'admin' if user else False
+            result = user.permission == 'admin' if user else False
+            queries_logger.debug(f'check_user_is_admin result for user {user_id}: {result}')
+            return result
     except SQLAlchemyError as e:
         queries_logger.error(f'Error checking if user is admin: {e}')
         raise DatabaseError('Error checking admin status', e)
@@ -355,7 +368,9 @@ def get_user_word_counts(user_id: int) -> List[Tuple[str, int]]:
     try:
         with next(get_db()) as session:
             results = session.query(UserHasWord).filter_by(user_id=user_id).all()
-            return [(result.word_name, result.count) for result in results]
+            result_list = [(result.word_name, result.count) for result in results]
+            queries_logger.debug(f'get_user_word_counts result for user {user_id}: {result_list}')
+            return result_list
     except SQLAlchemyError as e:
         queries_logger.error(f'Error retrieving words and counts for user: {user_id}: {e}')
         raise DatabaseError('Error retrieving user word counts', e)

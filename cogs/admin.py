@@ -27,6 +27,7 @@ class AdminCommands(commands.Cog):
         """
         self.bot = bot
         self.config = get_bot_config()
+        bot_logger.info('Admin commands cog initialized')
 
     @app_commands.command(name="aw", description="Add a word to the database (admin-only)")
     async def add_word(self, interaction: discord.Interaction, word: str):
@@ -38,11 +39,12 @@ class AdminCommands(commands.Cog):
             word (str): The word to be added to the database.
         """
         await interaction.response.defer()
+        bot_logger.info(f'Add word requested - Word: {word}, Admin: {interaction.user.display_name}')
 
         if queries.check_user_is_admin(interaction.user.id):
             queries.add_words(word)
             await scan(self.bot, self.config.server_id, target_word=word)
-            bot_logger.info(f"Word '{word}' added and scanned")
+            bot_logger.info(f"Word '{word}' added and scanned by admin {interaction.user.display_name}")
 
             add_word_embed = Embed(
                 title='Word added',
@@ -51,9 +53,11 @@ class AdminCommands(commands.Cog):
                 color=Color.green()
             )
             await interaction.followup.send(embed=add_word_embed)
-            bot_logger.info('Message for adding word sent')
+            bot_logger.debug('Add word confirmation sent')
         else:
             await self.permission_abuse(interaction)
+            bot_logger.warning(f'Unauthorized add word attempt by {interaction.user.display_name} '
+                               f'(ID: {interaction.user.id})')
 
     @app_commands.command(name="rw", description="Remove a word from the database (admin-only)")
     async def remove_word(self, interaction: discord.Interaction, word: str):
@@ -65,11 +69,11 @@ class AdminCommands(commands.Cog):
             word (str): The word to be removed from the database.
         """
         await interaction.response.defer()
-        bot_logger.debug(f'Removing word: {word} from database')
+        bot_logger.info(f'Remove word requested - Word: {word}, Admin: {interaction.user.display_name}')
 
         if queries.check_user_is_admin(interaction.user.id):
             queries.remove_word(word)
-            bot_logger.debug(f'Word: {word} removed from database')
+            bot_logger.info(f"Word '{word}' removed by admin {interaction.user.display_name}")
 
             remove_word_embed = Embed(
                 title='Removed word',
@@ -78,9 +82,11 @@ class AdminCommands(commands.Cog):
                 color=Color.red()
             )
             await interaction.followup.send(embed=remove_word_embed)
-            bot_logger.info('Message for removing word sent')
+            bot_logger.debug('Remove word confirmation sent')
         else:
             await self.permission_abuse(interaction)
+            bot_logger.warning(f'Unauthorized remove word attempt by {interaction.user.display_name} '
+                               f'(ID: {interaction.user.id})')
 
     async def permission_abuse(self, interaction: discord.Interaction):
         """
@@ -89,7 +95,8 @@ class AdminCommands(commands.Cog):
         Args:
             interaction (discord.Interaction): The interaction object representing the command invocation.
         """
-        bot_logger.debug('Permission abuse')
+        bot_logger.warning(f'Permission abuse detected - User: {interaction.user.display_name} '
+                           f'(ID: {interaction.user.id})')
         admin_users = [self.bot.get_user(admin_id).display_name for admin_id in self.config.admin_ids]
         admin_list = ', '.join(admin_users)
         mod_abuse_embed = Embed(
@@ -99,9 +106,15 @@ class AdminCommands(commands.Cog):
             color=Color.red()
         )
         await interaction.followup.send(embed=mod_abuse_embed)
-        bot_logger.info('Message for mod abuser sent')
+        bot_logger.debug('Permission abuse message sent')
 
 
 async def setup(bot):
+    """
+    Set up the AdminCommands cog.
+
+    Args:
+        bot: The Discord bot instance to add this cog to
+    """
     await bot.add_cog(AdminCommands(bot))
-    bot_logger.debug('Admin commands loaded')
+    bot_logger.info('Admin commands cog loaded')
