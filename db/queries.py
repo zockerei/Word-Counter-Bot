@@ -1,10 +1,10 @@
 import logging
 from sqlalchemy.exc import SQLAlchemyError
-from db.models import User, Word, UserHasWord
+from db.models import Base, User, Word, UserHasWord
 from typing import Optional, List, Tuple
 from db.database import get_db
 
-queries_logger = logging.getLogger('bot.queries')
+queries_logger = logging.getLogger('db.queries')
 queries_logger.info('Logging setup complete')
 
 
@@ -32,20 +32,25 @@ class DatabaseError(Exception):
 
 def drop_tables():
     """
-    Drops tables from the database if they exist.
+    Drops and recreates all tables in the database.
 
     Raises:
-        DatabaseError: If there is an error dropping the tables.
+        DatabaseError: If there is an error dropping or recreating the tables.
     """
     try:
         with next(get_db()) as session:
+            # Drop tables
             UserHasWord.__table__.drop(session.bind, checkfirst=True)
             Word.__table__.drop(session.bind, checkfirst=True)
             User.__table__.drop(session.bind, checkfirst=True)
-            queries_logger.info('Tables dropped successfully')
+
+            # Recreate tables
+            Base.metadata.create_all(session.bind)
+
+            queries_logger.info('Tables dropped and recreated successfully')
     except SQLAlchemyError as e:
-        queries_logger.error(f'Failed to drop tables: {e}')
-        raise DatabaseError('Failed to drop tables', e)
+        queries_logger.error(f'Failed to drop and recreate tables: {e}')
+        raise DatabaseError('Failed to drop and recreate tables', e)
 
 
 def add_words(*words):
