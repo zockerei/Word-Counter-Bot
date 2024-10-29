@@ -1,6 +1,6 @@
 import unittest
 import logging
-from config.config import setup_logging
+from bot.config import setup_logging
 import src.sql as sql
 
 

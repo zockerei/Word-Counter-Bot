@@ -1,6 +1,7 @@
 __pycache__/
 .idea/
-db/
+db/word_counter.db
 config/config.txt
 venv/
 logs/
+instance/
