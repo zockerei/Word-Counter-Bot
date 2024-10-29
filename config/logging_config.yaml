@@ -4,7 +4,7 @@ disable_existing_loggers: False
 formatters:
   basic:
     (): config.CustomFormatter
-    format: '[{asctime}] [{levelname:<8}] {name}: {message}'
+    format: '{asctime} [{levelname:<8}] {name}: {message}'
     datefmt: '%Y-%m-%d %H:%M:%S'
     style: '{'
 
