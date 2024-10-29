@@ -232,7 +232,8 @@ def get_highest_count_column(word: str) -> Optional[Tuple]:
         word (str): The word to find the highest count for.
 
     Returns:
-        Optional[Tuple]: A tuple of (user_id, word_name, count) for the user with the highest count, or None if not found.
+        Optional[Tuple]: A tuple of (user_id, word_name, count) for the user with the highest count,
+        or None if not found.
 
     Raises:
         DatabaseError: If there is an error retrieving the highest count.

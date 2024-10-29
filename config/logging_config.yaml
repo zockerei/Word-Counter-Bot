@@ -3,6 +3,12 @@ disable_existing_loggers: False
 
 formatters:
   basic:
+    (): config.CustomFormatter
+    format: '{asctime} [{levelname:<8}] {name}: {message}'
+    datefmt: '%Y-%m-%d %H:%M:%S'
+    style: '{'
+
+  file_formatter:
     format: '[{asctime}] [{levelname:<8}] {name}: {message}'
     datefmt: '%Y-%m-%d %H:%M:%S'
     style: '{'
@@ -10,7 +16,7 @@ formatters:
 handlers:
   rotating_file:
     class: logging.handlers.TimedRotatingFileHandler
-    formatter: basic
+    formatter: file_formatter
     when: W0
     interval: 1
     backupCount: 4
@@ -23,7 +29,7 @@ handlers:
 
   error_file:
     class: logging.FileHandler
-    formatter: basic
+    formatter: file_formatter
     encoding: utf-8
     mode: w
     level: ERROR
@@ -31,40 +37,40 @@ handlers:
 loggers:
   discord:
     level: INFO
-    handlers: [rotating_file, console, error_file]
+    handlers: [rotating_file, error_file, console]
     propagate: no
 
   bot:
     level: DEBUG
-    handlers: [rotating_file, console, error_file]
+    handlers: [rotating_file, error_file, console]
     propagate: no
 
   cogs.admin:
     level: DEBUG
-    handlers: [rotating_file, console, error_file]
+    handlers: [rotating_file, error_file, console]
     propagate: no
 
   cogs.general:
     level: DEBUG
-    handlers: [rotating_file, console, error_file]
+    handlers: [rotating_file, error_file, console]
     propagate: no
 
   cogs.events:
     level: DEBUG
-    handlers: [rotating_file, console, error_file]
+    handlers: [rotating_file, error_file, console]
     propagate: no
 
   bot.logic:
     level: DEBUG
-    handlers: [rotating_file, console, error_file]
+    handlers: [rotating_file, error_file, console]
     propagate: no
 
   db.queries:
     level: DEBUG
-    handlers: [rotating_file, console, error_file]
+    handlers: [rotating_file, error_file, console]
     propagate: no
 
   bot.unittest:
     level: INFO
-    handlers: [rotating_file, console, error_file]
+    handlers: [rotating_file, error_file, console]
     propagate: no
