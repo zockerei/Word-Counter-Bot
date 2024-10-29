@@ -55,9 +55,9 @@ class GeneralCommands(commands.Cog):
 
         highest_count_tuple = queries.get_highest_count_column(word)
         highest_count_user = self.bot.get_user(highest_count_tuple[0]).display_name
-        count_embed.set_footer(text=f"""The person who has said {word} the most is
-                                    {highest_count_user} with {highest_count_tuple[2]} times
-                                    Imagine 🐕 💦""")
+        count_embed.set_footer(text=f'The person who has said {word} the most is '
+                                    f'{highest_count_user} with {highest_count_tuple[2]} times. '
+                                    'Imagine 🐕💦')
         await interaction.followup.send(embed=count_embed)
         bot_logger.debug('Count message sent')
 

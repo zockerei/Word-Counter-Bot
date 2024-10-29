@@ -26,7 +26,6 @@ async def main():
     for filename in os.listdir(COG_FOLDER_PATH):
         if filename.endswith('.py'):
             await bot.load_extension(f'cogs.{filename[:-3]}')
-            bot_logger.debug(f'Loaded cog: {filename[:-3]}')
     await bot.start(config.token)
 
 asyncio.run(main())
