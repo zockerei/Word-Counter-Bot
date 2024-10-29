@@ -17,7 +17,9 @@ async def scan(bot, server_id, word_counts=None, target_user_id=None, target_wor
         target_user_id (int, optional): If provided, scans only for this user. Defaults to None.
         target_word (str, optional): If provided, scans for this word only. Defaults to None.
     """
-    logic_logger.info(f"Starting scan. User: {target_user_id}, Word: {target_word}, Server: {server_id}")
+    scan_type = "targeted" if target_user_id or target_word else "full"
+    logic_logger.info(f"Starting {scan_type} scan - Server: {server_id}, User: {target_user_id}, Word: {target_word}")
+
     guild = bot.get_guild(server_id)
     word_counts = word_counts or defaultdict(lambda: defaultdict(int))
     total_messages_scanned = 0
@@ -26,13 +28,13 @@ async def scan(bot, server_id, word_counts=None, target_user_id=None, target_wor
         logic_logger.debug(f"Scanning channel: {channel.name} (ID: {channel.id})")
         messages_scanned = await scan_channel(channel, word_counts, target_user_id, target_word)
         total_messages_scanned += messages_scanned
-        logic_logger.debug(f"Finished scanning channel: {channel.name}. Messages scanned: {messages_scanned}")
+        logic_logger.debug(f"Channel scan complete - {channel.name}: {messages_scanned} messages")
 
     update_word_counts(word_counts)
-    logic_logger.info(f"Scan completed. Total messages scanned: {total_messages_scanned}")
+    logic_logger.info(f"Scan completed - Total messages: {total_messages_scanned}, Words tracked: {len(word_counts)}")
 
 
-async def scan_channel(channel, word_counts, target_user_id=None, target_word=None):
+async def scan_channel(channel, word_counts, target_user_id=None, target_word=None) -> int:
     """
     Scans a channel and its threads for word occurrences.
 
@@ -46,19 +48,22 @@ async def scan_channel(channel, word_counts, target_user_id=None, target_word=No
         int: The number of messages scanned.
     """
     messages_scanned = await scan_messages(channel, word_counts, target_user_id, target_word)
-    logic_logger.debug(f"Scanned {messages_scanned} messages in channel: {channel.name}")
+    logic_logger.debug(f"Main channel scanned - {channel.name}: {messages_scanned} messages")
 
     threads = [thread async for thread in channel.archived_threads()] + channel.threads
+    if threads:
+        logic_logger.debug(f"Found {len(threads)} threads in {channel.name}")
+
     for thread in threads:
         logic_logger.debug(f"Scanning thread: {thread.name} (ID: {thread.id})")
         thread_messages_scanned = await scan_messages(thread, word_counts, target_user_id, target_word)
         messages_scanned += thread_messages_scanned
-        logic_logger.debug(f"Finished scanning thread: {thread.name}. Messages scanned: {thread_messages_scanned}")
+        logic_logger.debug(f"Thread scan complete - {thread.name}: {thread_messages_scanned} messages")
 
     return messages_scanned
 
 
-async def scan_messages(channel, word_counts, target_user_id=None, target_word=None):
+async def scan_messages(channel, word_counts, target_user_id=None, target_word=None) -> int:
     """
     Scans messages in a channel or thread for word occurrences.
 
@@ -77,8 +82,8 @@ async def scan_messages(channel, word_counts, target_user_id=None, target_word=N
         if target_user_id and message.author.id != target_user_id:
             continue
         process_message(message, word_counts, target_word)
-        if messages_scanned % 100 == 0:
-            logic_logger.debug(f"Scanned {messages_scanned} messages in {channel.name} so far.")
+        if messages_scanned % 200 == 0:
+            logic_logger.debug(f"Progress update - {channel.name}: {messages_scanned} messages scanned")
     return messages_scanned
 
 
@@ -96,7 +101,9 @@ def process_message(message, word_counts, target_word=None):
 
     for word in words_to_check:
         if word and word in content_normalized:
-            word_counts[message.author.id][word] += content_normalized.count(word)
+            count = content_normalized.count(word)
+            word_counts[message.author.id][word] += count
+            logic_logger.debug(f"Word found - '{word}' ({count}x) by user {message.author.display_name}")
 
 
 def update_word_counts(word_counts):
@@ -106,10 +113,18 @@ def update_word_counts(word_counts):
     Args:
         word_counts (dict): A dictionary containing word counts for users.
     """
+    updates_made = 0
     for user_id, update_words in word_counts.items():
         for word, update_count in update_words.items():
             current_count = queries.get_count(user_id, word)
             if current_count is None:
                 queries.add_user_has_word(user_id, word, update_count)
+                updates_made += 1
+                logic_logger.info(f"New word count added - User: {user_id}, Word: '{word}', Count: {update_count}")
             elif update_count > current_count:
                 queries.update_user_count(user_id, word, update_count - current_count)
+                updates_made += 1
+                logic_logger.info(f"Word count updated - User: {user_id}, Word: '{word}', New total: {update_count}")
+
+    if updates_made > 0:
+        logic_logger.info(f"Database update complete - {updates_made} records modified")

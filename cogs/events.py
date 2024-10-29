@@ -11,13 +11,37 @@ events_logger = logging.getLogger('cogs.events')
 
 
 class Events(commands.Cog):
+    """
+    A cog that handles various Discord events and bot interactions.
+
+    This cog manages events such as bot startup, member joins, and message monitoring.
+    It also handles word tracking and user management functionality.
+
+    Attributes:
+        bot: The Discord bot instance
+        config: The bot configuration settings
+    """
     def __init__(self, bot):
+        """
+        Initialize the Events cog.
+
+        Args:
+            bot: The Discord bot instance
+        """
         self.bot = bot
         self.config = get_bot_config()
-        events_logger.debug('Events cog initialized')
+        events_logger.info('Events cog initialized')
 
     @commands.Cog.listener()
     async def on_ready(self):
+        """
+        Handle the bot's ready event.
+
+        Performs initialization tasks when the bot starts up:
+        - Syncs command tree with the guild
+        - Initializes word list and user IDs
+        - Performs initial message scan if enabled
+        """
         guild = discord.Object(id=self.config.server_id)
         self.bot.tree.copy_global_to(guild=guild)
         await self.bot.tree.sync(guild=guild)
@@ -26,6 +50,7 @@ class Events(commands.Cog):
         queries.add_words(*self.config.words)
         queries.add_user_ids(*[member.id for member in self.bot.get_guild(self.config.server_id).members])
         queries.add_admins(*self.config.admin_ids)
+        events_logger.info(f'Initialized with {len(self.config.words)} words and {len(self.config.admin_ids)} admins')
 
         if not self.config.disable_initial_scan:
             await scan(self.bot, self.config.server_id)
@@ -41,8 +66,7 @@ class Events(commands.Cog):
         Args:
             member (discord.Member): The member who joined the server.
         """
-        events_logger.info(f"{member} joined")
-        events_logger.debug(f'Member ID: {member.id}')
+        events_logger.info(f"Member joined - Name: {member.display_name}, ID: {member.id}")
         queries.add_user_ids(member.id)
 
         username = member.display_name
@@ -57,7 +81,7 @@ class Events(commands.Cog):
 
         await self.bot.get_channel(self.config.channel_id).send(embed=new_user_embed)
 
-        await scan(self.config.server_id, target_user_id=member.id)
+        await scan(self.bot, self.config.server_id, target_user_id=member.id)
         events_logger.info('New user message sent')
 
     @commands.Cog.listener()
@@ -74,18 +98,61 @@ class Events(commands.Cog):
 
         # Format the message content using unidecode
         formatted_content = unidecode(message.content).lower()
-        events_logger.debug(f'Formatted content: {formatted_content}')
+        events_logger.debug(f'Processing message from {message.author.display_name} (ID: {message.author.id})')
 
         current_words = queries.get_words()
-        words_in_message = formatted_content.split()
         for word in current_words:
-            if word.lower() in words_in_message:
+            if word.lower() in formatted_content:
                 await self.handle_word_count(message, word)
-                events_logger.info(f'Word: "{word}" found in message')
+                events_logger.info(f'Tracked word "{word}" found in message from {message.author.display_name}')
             else:
                 events_logger.debug(f'Word: "{word}" not found in message')
 
+    async def handle_word_count(self, message: discord.Message, word: str):
+        """
+        Handle word count in a message.
+
+        This function updates the count for a word said by a user and sends a notification
+        if it's the first time the user has said the word.
+
+        Args:
+            message (discord.Message): The message containing the word.
+            word (str): The word to count in the message.
+        """
+        events_logger.debug(f'Word: {word} found in message')
+
+        # Use the same formatting as in on_message
+        formatted_content = unidecode(message.content).lower()
+
+        # Count occurrences using string count instead of split
+        word_count = formatted_content.count(word.lower())
+        user_id = message.author.id
+
+        if queries.get_count(user_id, word) is None:
+            events_logger.debug(f'First time {user_id} has said {word}')
+            queries.update_user_count(user_id, word, word_count)
+
+            username = message.author.display_name
+
+            first_time_embed = Embed(
+                title='First time 😩',
+                description=f"""{username} was a naughty boy and said {word}\n
+                His first time... 💦""",
+                color=Color.red()
+            )
+            await message.channel.send(embed=first_time_embed)
+            events_logger.info(f'First time message sent: {username}, {word}')
+            return
+
+        queries.update_user_count(user_id, word, word_count)
+
 
 async def setup(bot):
+    """
+    Set up the Events cog.
+
+    Args:
+        bot: The Discord bot instance to add this cog to
+    """
     await bot.add_cog(Events(bot))
-    events_logger.debug('Events loaded')
+    events_logger.info('Events cog loaded')
