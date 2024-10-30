@@ -16,7 +16,7 @@ bot_logger.info('Intents setup complete')
 
 bot = commands.Bot(command_prefix='!', intents=intents)
 
-config = get_bot_config()
+bot.config = get_bot_config()
 
 
 async def main():
@@ -26,6 +26,6 @@ async def main():
     for filename in os.listdir(COG_FOLDER_PATH):
         if filename.endswith('.py'):
             await bot.load_extension(f'cogs.{filename[:-3]}')
-    await bot.start(config.token)
+    await bot.start(bot.config.token)
 
 asyncio.run(main())
