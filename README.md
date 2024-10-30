@@ -45,11 +45,14 @@ word-counter-bot/
 
 ## Setup and Configuration
 
-1. Ensure you have Python 3.11 or later installed
-2. Install required dependencies:
+1. Ensure you have Python 3.12 or later installed (May work with earlier versions, but not tested)
+
+2. Clone the repository:
+   ```bash
+   git clone <repository-url>
+   cd Word-Counter-Bot
    ```
-   pip install discord.py pyyaml
-   ```
+
 3. Create a `config/bot_config.yaml` file with the following structure:
    ```yaml
    token: "YOUR_BOT_TOKEN"
@@ -64,6 +67,7 @@ word-counter-bot/
    disable_initial_scan: false
    ```
 4. Edit the `config/logging_config.yaml` file for log levels
+
 5. Run the bot using:
    ```
    run.bat
@@ -71,7 +75,7 @@ word-counter-bot/
 
 ### Configuration Options
 
-- `disable_initial_scan`: Set to `true` to disable the initial server history scan when the bot starts. Default is `false`
+- `disable_initial_scan`: Set to `true` to disable the initial server history scan when the bot starts. Default is `true`
 
 ## Autostart with Windows Fluent Terminal
 
@@ -81,8 +85,6 @@ To set up autostart using Windows Fluent Terminal:
 2. Configure the command line:
    - Command Line: `C:\path\to\your\run.bat
    - Starting Directory: `C:\path\to\your\bot\directory`
-
-Adjust other settings as needed.
 
 ## Notes
 
