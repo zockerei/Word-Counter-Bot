@@ -3,9 +3,16 @@ from sqlalchemy.exc import SQLAlchemyError
 from db.models import Base, User, Word, UserHasWord
 from typing import Optional, List, Tuple
 from db.database import get_db
+from dogpile.cache import make_region
 
 queries_logger = logging.getLogger('db.queries')
 queries_logger.info('Logging setup complete')
+
+# Configure the cache region
+region = make_region().configure(
+    'dogpile.cache.memory',
+    expiration_time=300  # Cache expiration time in seconds
+)
 
 
 class DatabaseError(Exception):
@@ -193,9 +200,10 @@ def get_count(user_id: int, word: str) -> Optional[int]:
         raise DatabaseError('Error getting count', e)
 
 
+@region.cache_on_arguments()
 def get_words() -> List[str]:
     """
-    Gets all words from the database.
+    Gets all words from the database, with caching using dogpile.cache.
 
     Returns:
         List[str]: A list of all words in the database.

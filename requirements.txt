@@ -2,3 +2,4 @@ discord.py==2.4.0
 PyYAML==6.0.2
 sqlalchemy==2.0.35
 Unidecode~=1.3.8
+dogpile.cache==1.1.8
