@@ -2,6 +2,7 @@ from collections import defaultdict
 from unidecode import unidecode
 import logging
 import db.queries as queries
+import re
 
 logic_logger = logging.getLogger('bot.logic')
 
@@ -100,10 +101,13 @@ def process_message(message, word_counts, target_word=None):
     words_to_check = [target_word] if target_word else queries.get_words()
 
     for word in words_to_check:
-        if word and word in content_normalized:
-            count = content_normalized.count(word)
-            word_counts[message.author.id][word] += count
-            logic_logger.debug(f"Word found - '{word}' ({count}x) by user {message.author.display_name}")
+        if word:
+            pattern = r'\b' + re.escape(word) + r'\b'
+            matches = re.findall(pattern, content_normalized)
+            count = len(matches)
+            if count > 0:
+                word_counts[message.author.id][word] += count
+                logic_logger.debug(f"Word found - '{word}' ({count}x) by user {message.author.display_name}")
 
 
 def update_word_counts(word_counts):
