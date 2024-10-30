@@ -8,10 +8,9 @@ from dogpile.cache import make_region
 queries_logger = logging.getLogger('db.queries')
 queries_logger.info('Logging setup complete')
 
-# Configure the cache region
 region = make_region().configure(
     'dogpile.cache.memory',
-    expiration_time=300  # Cache expiration time in seconds
+    expiration_time=300
 )
 
 

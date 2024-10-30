@@ -6,6 +6,7 @@ import logging
 import discord
 from config import get_bot_config
 from logic import scan
+import re
 
 events_logger = logging.getLogger('cogs.events')
 
@@ -96,19 +97,21 @@ class Events(commands.Cog):
         if message.author == self.bot.user:
             return
 
-        # Format the message content using unidecode
         formatted_content = unidecode(message.content).lower()
         events_logger.debug(f'Processing message from {message.author.display_name} (ID: {message.author.id})')
 
         current_words = queries.get_words()
         for word in current_words:
-            if word.lower() in formatted_content:
-                await self.handle_word_count(message, word)
-                events_logger.info(f'Tracked word "{word}" found in message from {message.author.display_name}')
-            else:
-                events_logger.debug(f'Word: "{word}" not found in message')
+            if word:
+                pattern = r'\b' + re.escape(word) + r'\b'
+                matches = re.findall(pattern, formatted_content)
+                if matches:
+                    await self.handle_word_count(message, word, matches)
+                    events_logger.info(f'Tracked word "{word}" found in message from {message.author.display_name}')
+                else:
+                    events_logger.debug(f'Word: "{word}" not found in message')
 
-    async def handle_word_count(self, message: discord.Message, word: str):
+    async def handle_word_count(self, message: discord.Message, word: str, matches: list):
         """
         Handle word count in a message.
 
@@ -118,14 +121,11 @@ class Events(commands.Cog):
         Args:
             message (discord.Message): The message containing the word.
             word (str): The word to count in the message.
+            matches (list): The list of matches found in the message.
         """
         events_logger.debug(f'Word: {word} found in message')
 
-        # Use the same formatting as in on_message
-        formatted_content = unidecode(message.content).lower()
-
-        # Count occurrences using string count instead of split
-        word_count = formatted_content.count(word.lower())
+        word_count = len(matches)
         user_id = message.author.id
 
         if queries.get_count(user_id, word) is None:
