@@ -2,7 +2,6 @@ import discord
 from discord import Embed, Color, app_commands
 from discord.ext import commands
 import logging
-from config import get_bot_config
 import db.queries as queries
 from logic import scan
 
@@ -26,7 +25,6 @@ class AdminCommands(commands.Cog):
             bot (commands.Bot): The Discord bot instance.
         """
         self.bot = bot
-        self.config = get_bot_config()
         bot_logger.info('Admin commands cog initialized')
 
     @app_commands.command(name="aw", description="Add a word to the database (admin-only)")
@@ -43,7 +41,7 @@ class AdminCommands(commands.Cog):
 
         if queries.check_user_is_admin(interaction.user.id):
             queries.add_words(word)
-            await scan(self.bot, self.config.server_id, target_word=word)
+            await scan(self.bot, self.bot.config.server_id, target_word=word)
             bot_logger.info(f"Word '{word}' added and scanned by admin {interaction.user.display_name}")
 
             add_word_embed = Embed(
@@ -97,7 +95,7 @@ class AdminCommands(commands.Cog):
         """
         bot_logger.warning(f'Permission abuse detected - User: {interaction.user.display_name} '
                            f'(ID: {interaction.user.id})')
-        admin_users = [self.bot.get_user(admin_id).display_name for admin_id in self.config.admin_ids]
+        admin_users = [self.bot.get_user(admin_id).display_name for admin_id in self.bot.config.admin_ids]
         admin_list = ', '.join(admin_users)
         mod_abuse_embed = Embed(
             title='No permission',
