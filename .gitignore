@@ -1,6 +1,7 @@
 __pycache__/
 .idea/
 config/config.txt
+config/bot_config.yaml
 venv/
 logs/
 instance/
