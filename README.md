@@ -63,7 +63,7 @@ word-counter-bot/
      - ADMIN_USER_ID_2
    disable_initial_scan: false
    ```
-4. Create a `config/logging_config.yaml` file for logging configuration
+4. Edit the `config/logging_config.yaml` file for log levels
 5. Run the bot using:
    ```
    run.bat
