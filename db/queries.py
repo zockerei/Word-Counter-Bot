@@ -386,3 +386,27 @@ def get_user_word_counts(user_id: int) -> List[Tuple[str, int]]:
     except SQLAlchemyError as e:
         queries_logger.error(f'Error retrieving words and counts for user: {user_id}: {e}')
         raise DatabaseError('Error retrieving user word counts', e)
+
+
+def get_word_user_counts(word: str) -> List[Tuple[int, int]]:
+    """
+    Gets all users and their counts for a specific word.
+
+    Args:
+        word (str): The word to get user counts for.
+
+    Returns:
+        List[Tuple[int, int]]: A list of tuples containing (user_id, count) for each user associated with the word.
+
+    Raises:
+        DatabaseError: If there is an error retrieving the word's user counts.
+    """
+    try:
+        with next(get_db()) as session:
+            results = session.query(UserHasWord).filter_by(word_name=word).all()
+            result_list = [(result.user_id, result.count) for result in results]
+            queries_logger.debug(f'get_word_user_counts result for word {word}: {result_list}')
+            return result_list
+    except SQLAlchemyError as e:
+        queries_logger.error(f'Error retrieving users and counts for word: {word}: {e}')
+        raise DatabaseError('Error retrieving word user counts', e)

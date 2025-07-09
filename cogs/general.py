@@ -173,6 +173,7 @@ class GeneralCommands(commands.Cog):
             /aw [word]: Add word to database (admin-only).
             /rw [word]: Remove a word from database (admin-only).
             /uwc [user]: Show all words and their counts for a specific user.
+            /wuc [word]: Show all users and their counts for a specific word.
             """,
             color=Color.blue()
         ).set_footer(
@@ -217,6 +218,42 @@ class GeneralCommands(commands.Cog):
         )
         await interaction.followup.send(embed=user_words_embed)
         bot_logger.debug('Word counts message sent')
+
+    @app_commands.command(name="wuc", description="Show all users and their counts for a specific word")
+    async def word_user_counts(self, interaction: discord.Interaction, word: str):
+        """
+        Shows all users and their counts for a specific word.
+
+        Args:
+            interaction (discord.Interaction): The interaction object.
+            word (str): The word to check counts for.
+        """
+        await interaction.response.defer()
+        bot_logger.info(f'Word user counts requested - Word: {word}, '
+                        f'Requester: {interaction.user.display_name}')
+
+        user_counts = queries.get_word_user_counts(word)
+
+        if not user_counts:
+            bot_logger.info(f'No user counts found for word: {word}')
+            no_users_embed = Embed(
+                title=f'No users found for "{word}"',
+                description=f"No users have said the word '{word}' yet.",
+                color=Color.red()
+            )
+            await interaction.followup.send(embed=no_users_embed)
+            return
+
+        sorted_user_counts = sorted(user_counts, key=lambda x: x[1], reverse=True)
+        users_description = "\n".join([f"{self.bot.get_user(user_id).display_name}: {count}"
+                                      for user_id, count in sorted_user_counts])
+        word_users_embed = Embed(
+            title=f'User counts for "{word}"',
+            description=users_description,
+            color=Color.blue()
+        )
+        await interaction.followup.send(embed=word_users_embed)
+        bot_logger.debug('User counts message sent')
 
 
 async def setup(bot):
