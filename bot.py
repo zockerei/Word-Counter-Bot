@@ -9,7 +9,9 @@ setup_logging()
 bot_logger = logging.getLogger('bot')
 bot_logger.info('Logging setup complete')
 
-intents = discord.Intents.default()
+intents = discord.Intents.none()
+intents.guilds = True
+intents.guild_messages = True
 intents.message_content = True
 intents.members = True
 bot_logger.info('Intents setup complete')
