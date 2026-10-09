@@ -11,12 +11,57 @@ from counting import normalize
 
 logger = logging.getLogger('bot.commands')
 
+# Longer lists would get cut off by Discord's embed size limit.
+MAX_LIST_LINES = 25
+MEDALS = ['🥇', '🥈', '🥉']
 
-@app_commands.command(name='c', description='Count occurrences of a word for a specific user')
-async def count(interaction: discord.Interaction, word: str, user: discord.Member):
-    bot = interaction.client
+
+async def tracked_words(
+    interaction: discord.Interaction, current: str
+) -> list[app_commands.Choice[str]]:
+    """Suggest tracked words while typing."""
+    current = normalize(current)
+    return [
+        app_commands.Choice(name=word, value=word)
+        for word in interaction.client.patterns
+        if current in word
+    ][:25]
+
+
+def ranked(lines: list[str]) -> str:
+    shown = [
+        f'{MEDALS[i] if i < len(MEDALS) else f"{i + 1}."} {line}'
+        for i, line in enumerate(lines[:MAX_LIST_LINES])
+    ]
+    if len(lines) > MAX_LIST_LINES:
+        shown.append(f'…and {len(lines) - MAX_LIST_LINES} more')
+    return '\n'.join(shown)
+
+
+@app_commands.command(name='count', description='How often someone said a word')
+@app_commands.describe(user='Who to check', word='Leave empty to see all their words')
+@app_commands.autocomplete(word=tracked_words)
+async def count(interaction: discord.Interaction, user: discord.Member, word: str | None = None):
+    db = interaction.client.db
+    if word is None:
+        counts = await db.user_counts(user.id)
+        if not counts:
+            embed = Embed(
+                title=f'{user.display_name} is clean',
+                description=f"{user.mention} hasn't said any tracked words.",
+                color=Color.green(),
+            )
+        else:
+            embed = Embed(
+                title=f'Word counts of {user.display_name}',
+                description=ranked([f'{word}: {amount}' for word, amount in counts]),
+                color=Color.blue(),
+            )
+        await interaction.response.send_message(embed=embed)
+        return
+
     word = normalize(word)
-    amount = await bot.db.get_count(user.id, word)
+    amount = await db.get_count(user.id, word)
     if not amount:
         embed = Embed(
             title=f'{user.display_name} is clean',
@@ -24,7 +69,7 @@ async def count(interaction: discord.Interaction, word: str, user: discord.Membe
             color=Color.green(),
         )
     else:
-        top_user_id, top_count = (await bot.db.word_ranking(word))[0]
+        top_user_id, top_count = (await db.word_ranking(word))[0]
         embed = Embed(
             title=f'Count from {user.display_name}',
             description=f'{user.mention} has said {word} {amount} times\n\n'
@@ -35,98 +80,46 @@ async def count(interaction: discord.Interaction, word: str, user: discord.Membe
     await interaction.response.send_message(embed=embed)
 
 
-@app_commands.command(name='hc', description='Retrieve the highest count of a word')
-async def highest_count(interaction: discord.Interaction, word: str):
-    word = normalize(word)
-    ranking = await interaction.client.db.word_ranking(word)
-    if not ranking:
+@app_commands.command(name='top', description='Who said a word the most')
+@app_commands.describe(word='Leave empty for the highest counts of all words')
+@app_commands.autocomplete(word=tracked_words)
+async def top(interaction: discord.Interaction, word: str | None = None):
+    db = interaction.client.db
+    if word is None:
+        rows = await db.top_counts(10)
+        lines = [f'<@{user_id}>: {word} {amount} times' for user_id, word, amount in rows]
+        title = 'Highest counts of all words'
+    else:
+        word = normalize(word)
+        rows = await db.word_ranking(word)
+        lines = [f'<@{user_id}>: {amount}' for user_id, amount in rows]
+        title = f'Who said "{word}" the most'
+
+    if not lines:
         embed = Embed(
             title='Dead Server',
-            description=f'No User in this Server has said {word}\n'
-                        f'Or the word is not being monitored :eyes:',
+            description='Nobody in this server has said that yet...\n'
+                        'Or the word is not being tracked :eyes:',
             color=Color.red(),
         )
     else:
-        user_id, amount = ranking[0]
-        embed = Embed(
-            title='Highest count from all Users',
-            description=f'The user who has said {word} the most is <@{user_id}>\n'
-                        f'With an impressive amount of {amount} times',
-            color=Color.gold(),
-        )
+        embed = Embed(title=title, description=ranked(lines), color=Color.gold())
     await interaction.response.send_message(embed=embed)
 
 
-@app_commands.command(name='thc', description='Retrieve the total highest count of all words')
-async def total_highest_count(interaction: discord.Interaction):
-    top = await interaction.client.db.top_counts(1)
-    if not top:
-        embed = Embed(
-            title='Dead Server',
-            description='No User in this Server has said any word...\n'
-                        'Or they tricked the system (not hard)',
-            color=Color.red(),
-        )
-    else:
-        user_id, word, amount = top[0]
-        embed = Embed(
-            title='Highest count of all words',
-            description=f'The winner for the Highest count of all words is... <@{user_id}>!\n'
-                        f'Who has said {word} {amount} times',
-            color=Color.gold(),
-        )
-    await interaction.response.send_message(embed=embed)
-
-
-@app_commands.command(name='sw', description='Show all tracked words')
-async def show_words(interaction: discord.Interaction):
+@app_commands.command(name='words', description='List the tracked words')
+async def words(interaction: discord.Interaction):
+    tracked = ', '.join(interaction.client.patterns) or 'No words yet. Add one with /addword.'
     embed = Embed(
         title='All words',
-        description='Here is a list of all the words you should rather not say...\n\n'
-                    + ', '.join(interaction.client.patterns),
+        description=f'Here is a list of all the words you should rather not say...\n\n{tracked}',
         color=Color.blue(),
     )
     await interaction.response.send_message(embed=embed)
 
 
-@app_commands.command(name='uwc', description='Show all words and their counts for a specific user')
-async def user_word_counts(interaction: discord.Interaction, member: discord.Member):
-    counts = await interaction.client.db.user_counts(member.id)
-    if not counts:
-        embed = Embed(
-            title=f'{member.display_name} has no words',
-            description=f"{member.mention} hasn't said any tracked words.",
-            color=Color.red(),
-        )
-    else:
-        embed = Embed(
-            title=f'Word counts for {member.display_name}',
-            description='\n'.join(f'{word}: {amount}' for word, amount in counts),
-            color=Color.blue(),
-        )
-    await interaction.response.send_message(embed=embed)
-
-
-@app_commands.command(name='wuc', description='Show all users and their counts for a specific word')
-async def word_user_counts(interaction: discord.Interaction, word: str):
-    word = normalize(word)
-    ranking = await interaction.client.db.word_ranking(word)
-    if not ranking:
-        embed = Embed(
-            title=f'No users found for "{word}"',
-            description=f"No users have said the word '{word}' yet.",
-            color=Color.red(),
-        )
-    else:
-        embed = Embed(
-            title=f'User counts for "{word}"',
-            description='\n'.join(f'<@{user_id}>: {amount}' for user_id, amount in ranking),
-            color=Color.blue(),
-        )
-    await interaction.response.send_message(embed=embed)
-
-
-@app_commands.command(name='aw', description='Add a word to the database (admin-only)')
+@app_commands.command(name='addword', description='Start tracking a word (admin)')
+@app_commands.describe(word='A word or phrase, spaces are fine')
 @app_commands.default_permissions(manage_guild=True)
 async def add_word(interaction: discord.Interaction, word: str):
     bot = interaction.client
@@ -141,8 +134,8 @@ async def add_word(interaction: discord.Interaction, word: str):
     logger.info('%s added the word "%s"', interaction.user, word)
     await interaction.response.send_message(embed=Embed(
         title='Word added',
-        description=f'Word that was added to the database:\n{word}\n\n'
-                    f'Counting old messages now, this can take a while.',
+        description=f'Now tracking **{word}**.\n'
+                    f'Counting old messages, this can take a while.',
         color=Color.green(),
     ))
     bot.run_in_background(_count_new_word(interaction, word))
@@ -164,7 +157,11 @@ async def _count_new_word(interaction: discord.Interaction, word: str) -> None:
     )
 
 
-@app_commands.command(name='rw', description='Remove a word from the database (admin-only)')
+@app_commands.command(
+    name='removeword', description='Stop tracking a word and delete its counts (admin)'
+)
+@app_commands.describe(word='The word to remove')
+@app_commands.autocomplete(word=tracked_words)
 @app_commands.default_permissions(manage_guild=True)
 async def remove_word(interaction: discord.Interaction, word: str):
     bot = interaction.client
@@ -175,33 +172,29 @@ async def remove_word(interaction: discord.Interaction, word: str):
     await bot.reload_words()
     logger.info('%s removed the word "%s"', interaction.user, word)
     await interaction.response.send_message(embed=Embed(
-        title='Removed word',
-        description=f'Removed word from database:\n{word}',
+        title='Word removed',
+        description=f'Stopped tracking **{word}** and deleted its counts.',
         color=Color.red(),
     ))
 
 
-@app_commands.command(name='h', description='Show bot usage instructions')
+@app_commands.command(name='help', description='Show all commands')
 async def help_command(interaction: discord.Interaction):
     embed = Embed(
-        title='Word Counter Bot Help',
-        description='Here are the available commands:\n\n'
-                    '/c [word] [user]: Count occurrences of a word for a specific user.\n'
-                    '/hc [word]: Retrieve the highest count of a word.\n'
-                    '/thc: Retrieve the total highest count of all words.\n'
-                    '/sw: Show all tracked words.\n'
-                    '/aw [word]: Add word to database (admin-only).\n'
-                    '/rw [word]: Remove a word from database (admin-only).\n'
-                    '/uwc [user]: Show all words and their counts for a specific user.\n'
-                    '/wuc [word]: Show all users and their counts for a specific word.',
+        title='Word Counter Bot',
+        description='I count how often everyone says the tracked words.\n\n'
+                    '`/count user [word]` How often someone said a word, '
+                    'or all their words if you leave the word empty\n'
+                    '`/top [word]` Who said a word the most, '
+                    'or the highest counts of all words\n'
+                    '`/words` List the tracked words\n'
+                    '`/addword word` Start tracking a word (admin)\n'
+                    '`/removeword word` Stop tracking a word (admin)',
         color=Color.blue(),
     ).set_footer(text='Use these commands wisely!')
     await interaction.response.send_message(embed=embed)
 
 
 def register(tree: app_commands.CommandTree) -> None:
-    for command in (
-        count, highest_count, total_highest_count, show_words, user_word_counts,
-        word_user_counts, add_word, remove_word, help_command,
-    ):
+    for command in (count, top, words, add_word, remove_word, help_command):
         tree.add_command(command)

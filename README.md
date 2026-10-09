@@ -1,94 +1,99 @@
 # Word-Counter-Bot
 
-A Discord bot designed to count occurrences of specified words within messages
+A Discord bot that counts how often each member says the words you choose.
 
-## Description
+- Counts every tracked word in every new message. Matching ignores case and accents, and only counts whole words, so `cat` doesn't match `concatenate`. Phrases with spaces work too.
+- Posts a message the first time someone says a word.
+- When you add a word, it also counts that word in all old messages, including threads and forum posts.
+- Stores the counts in your PostgreSQL database.
 
-Word-Counter-Bot is a Discord bot that tracks and counts specific words used by server members. It allows administrators to add and remove words for tracking purposes and provides various commands for users to check word counts and statistics
-
-## Project Structure
-```bash
-word-counter-bot/
-├── cogs/
-│   ├── admin.py
-│   ├── events.py
-│   └── general.py
-├── config/
-│   ├── bot_config.yaml
-│   └── logging_config.yaml
-├── db/
-│   ├── database.py
-│   ├── models.py
-│   └── queries.py
-├── instance/            # Auto-generated
-│   └── word_counter.db  # Auto-generated
-├── logs/                # Auto-generated
-│   ├── bot.log          # Auto-generated
-│   └── errors.log       # Auto-generated
-├── venv/                # Auto-generated
-├── bot.py
-├── config.py
-├── logic.py
-├── requirements.txt
-└── run.bat
-```
 ## Commands
 
-- `/h`: Show bot usage instructions
-- `/c <word> <user>`: Count occurrences of a word for a specific user
-- `/hc <word>`: Retrieve the highest count of a word
-- `/thc`: Retrieve the total highest count of all words
-- `/sw`: Show all tracked words
-- `/aw <word>`: Add word to database (admin-only)
-- `/rw <word>`: Remove a word from database (admin-only)
-- `/uwc <user>`: Show all words and their counts for a specific user
+| Command | |
+|---|---|
+| `/count user [word]` | How often someone said a word. Leave the word empty to see all their words |
+| `/top [word]` | Who said a word the most. Leave the word empty for the highest counts of all words |
+| `/words` | List the tracked words |
+| `/addword word` | Start tracking a word and count it in old messages (admin) |
+| `/removeword word` | Stop tracking a word and delete its counts (admin) |
+| `/help` | Show all commands |
 
-## Setup and Configuration
+`/addword` and `/removeword` need the **Manage Server** permission. To let other people or roles use them, go to **Server Settings → Integrations → Word-Counter-Bot**.
 
-1. Ensure you have Python 3.12 or later installed (May work with earlier versions, but not tested)
+## Discord setup
 
-2. Clone the repository:
-   ```bash
-   git clone <repository-url>
-   cd Word-Counter-Bot
-   ```
+1. Create an application in the [Discord Developer Portal](https://discord.com/developers/applications).
+2. Under **Bot**, copy the token and turn on **Message Content Intent** and **Server Members Intent**.
+3. Under **OAuth2 → URL Generator**, select the `bot` and `applications.commands` scopes, and these permissions:
+   - View Channels
+   - Send Messages
+   - Embed Links
+   - Read Message History
+4. Open the generated URL to add the bot to your server.
 
-3. Create a `config/bot_config.yaml` file with the following structure:
-   ```yaml
-   token: "YOUR_BOT_TOKEN"
-   words:
-     - "word1"
-     - "word2"
-   server_id: YOUR_SERVER_ID
-   channel_id: YOUR_CHANNEL_ID
-   admin_ids:
-     - ADMIN_USER_ID_1
-     - ADMIN_USER_ID_2
-   disable_initial_scan: false
-   ```
-4. Edit the `config/logging_config.yaml` file for log levels
+To get a server or channel ID, turn on **Developer Mode** in Discord's advanced settings, then right-click the server or channel and choose **Copy ID**.
 
-5. Run the bot using:
-   ```
-   run.bat
-   ```
+## Configuration
 
-### Configuration Options
+Copy `.env.example` to `.env` and fill it in:
 
-- `disable_initial_scan`: Set to `true` to disable the initial server history scan when the bot starts. Default is `true`
+```env
+DISCORD_TOKEN=your-discord-bot-token
 
-## Autostart with Windows Fluent Terminal
+# The server the bot counts words in.
+GUILD_ID=123456789012345678
 
-To set up autostart using Windows Fluent Terminal:
+# Optional. Channel for the welcome message when someone joins. Leave it empty for no message.
+WELCOME_CHANNEL_ID=
 
-1. Add a new profile in the terminal settings
-2. Configure the command line:
-   - Command Line: `C:\path\to\your\run.bat
-   - Starting Directory: `C:\path\to\your\bot\directory`
+# Set to true to count the full server history on startup. Words added with /addword
+# are always counted in the history, so this is only needed after the bot was offline.
+SCAN_HISTORY=false
 
-## Notes
+DATABASE_URL=postgresql://user:password@192.168.0.10:5432/word_counter
 
-- The bot uses SQLite for data storage (instance/word_counter.db)
-- Logs are stored in the logs/ folder with rotation
-- The bot requires the message content and server members intents
-- Discord permission integer: 274877975552
+# Docker only. The bot's IP on the br0 network. Pick a free one outside your router's DHCP range.
+BOT_IP=192.168.0.51
+
+# Optional. DEBUG, INFO, WARNING or ERROR. Defaults to INFO.
+LOG_LEVEL=INFO
+```
+
+Create the database before the first start, for example with `CREATE DATABASE word_counter;`. The bot creates its tables itself. If the database password contains special characters such as `@`, `:` or `/`, URL-encode them (`@` becomes `%40`).
+
+## Running
+
+### Docker
+
+```sh
+docker compose up -d
+```
+
+This pulls the prebuilt image from GHCR. Logs are kept in the `logs` volume.
+
+The container joins the existing `br0` network (Unraid's custom network) with the IP from `BOT_IP`. This lets it reach a database container that has its own IP on `br0`, which containers on the default bridge network cannot.
+
+### Windows
+
+Run `run.bat`. It creates a virtual environment and installs the requirements on first run, then starts the bot.
+
+### Manually
+
+Requires Python 3.12 or newer.
+
+```sh
+python -m venv .venv
+.venv/bin/pip install -r requirements.txt   # Windows: .venv\Scripts\pip
+.venv/bin/python bot.py                     # Windows: .venv\Scripts\python
+```
+
+Run the tests with `python -m unittest`.
+
+## The database
+
+| Table | |
+|---|---|
+| `words` | The tracked words, lowercase and without accents |
+| `word_counts` | One row per user and word: `user_id`, `word`, `count` |
+
+Removing a word deletes its counts. Counts stay when someone leaves the server.
