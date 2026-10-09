@@ -1,34 +1,25 @@
 @echo off
+cd /d "%~dp0"
 
 :: Check if Python is installed
 where python >nul 2>nul
 if %errorlevel% neq 0 (
     echo Python is not installed. Please install it first.
+    pause
     exit /b
 )
 
-:: Check if the virtual environment already exists
-if not exist venv (
+:: Create the virtual environment and install packages on first run
+if not exist .venv\Scripts\python.exe (
     echo Creating virtual environment...
-    python -m venv venv
-
-    :: Activate the virtual environment
-    call venv\Scripts\activate
-
-    :: Upgrade pip
-    python -m pip install --upgrade pip
-
-    :: Install the required packages
-    python -m pip install -r requirements.txt
-
-    echo Setup complete. The virtual environment is now active.
-) else (
-    echo Virtual environment already exists. Activating...
-    call venv\Scripts\activate
+    python -m venv .venv
+    .venv\Scripts\python.exe -m pip install --upgrade pip
+    .venv\Scripts\python.exe -m pip install -r requirements.txt
+    echo Setup complete.
 )
 
-:: Start the bot
-python bot.py
+:: Start the bot with the venv's Python
+.venv\Scripts\python.exe bot.py
 
 :: Keep the command prompt open
 pause

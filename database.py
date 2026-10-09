@@ -62,19 +62,20 @@ class Database:
             return await session.scalar(stmt)
 
     async def raise_counts(self, counts: dict[tuple[int, str], int]) -> None:
-        """Stores counts from a history scan. Existing counts are only ever raised, never lowered."""
-        if not counts:
-            return
-        stmt = insert(WordCount).values([
+        """Stores counts from a history scan. Existing counts are raised, never lowered."""
+        rows = [
             {'user_id': user_id, 'word': word, 'count': count}
             for (user_id, word), count in counts.items()
-        ])
-        stmt = stmt.on_conflict_do_update(
-            index_elements=[WordCount.user_id, WordCount.word],
-            set_={'count': func.greatest(WordCount.count, stmt.excluded.count)},
-        )
+        ]
         async with self.sessions.begin() as session:
-            await session.execute(stmt)
+            # Postgres allows at most 32767 parameters per statement, 3 per row here.
+            for start in range(0, len(rows), 5000):
+                stmt = insert(WordCount).values(rows[start:start + 5000])
+                stmt = stmt.on_conflict_do_update(
+                    index_elements=[WordCount.user_id, WordCount.word],
+                    set_={'count': func.greatest(WordCount.count, stmt.excluded.count)},
+                )
+                await session.execute(stmt)
 
     async def get_count(self, user_id: int, word: str) -> int:
         stmt = select(WordCount.count).where(WordCount.user_id == user_id, WordCount.word == word)

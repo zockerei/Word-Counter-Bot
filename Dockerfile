@@ -9,8 +9,6 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY *.py .
-COPY cogs cogs
-COPY config config
 
 RUN useradd --system --no-create-home bot \
     && mkdir logs \
