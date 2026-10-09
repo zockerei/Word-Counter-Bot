@@ -1,13 +1,21 @@
 import discord
 import logging.config
-from config import setup_logging, COG_FOLDER_PATH, get_bot_config
+from config import ConfigError, setup_logging, COG_FOLDER_PATH, load_settings
 from discord.ext import commands
+from dotenv import load_dotenv
 import os
 import asyncio
 
+load_dotenv()
 setup_logging()
 bot_logger = logging.getLogger('bot')
 bot_logger.info('Logging setup complete')
+
+try:
+    settings = load_settings()
+except ConfigError as exc:
+    bot_logger.critical('%s', exc)
+    raise SystemExit(1) from None
 
 intents = discord.Intents.none()
 intents.guilds = True
@@ -18,7 +26,7 @@ bot_logger.info('Intents setup complete')
 
 bot = commands.Bot(command_prefix='!', intents=intents)
 
-bot.config = get_bot_config()
+bot.config = settings
 
 
 async def main():

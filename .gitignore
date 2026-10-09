@@ -1,6 +1,21 @@
+# Environment variables
+.env
+
+# Python
 __pycache__/
-.idea/
-config/bot_config.yaml
+
+# Virtual environments
+.venv/
 venv/
+
+# Logs
 logs/
+*.log
+
+# Databases
 instance/
+*.db
+
+# IDE
+.vscode/
+.idea/

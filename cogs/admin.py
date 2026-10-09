@@ -41,7 +41,7 @@ class AdminCommands(commands.Cog):
 
         if queries.check_user_is_admin(interaction.user.id):
             queries.add_words(word)
-            await scan(self.bot, self.bot.config.server_id, target_word=word)
+            await scan(self.bot, self.bot.config.guild_id, target_word=word)
             bot_logger.info(f"Word '{word}' added and scanned by admin {interaction.user.display_name}")
 
             add_word_embed = Embed(

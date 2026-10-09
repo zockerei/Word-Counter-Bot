@@ -41,20 +41,17 @@ class Events(commands.Cog):
         - Initializes word list and user IDs
         - Performs initial message scan if enabled
         """
-        guild = discord.Object(id=self.bot.config.server_id)
+        guild = discord.Object(id=self.bot.config.guild_id)
         self.bot.tree.copy_global_to(guild=guild)
         await self.bot.tree.sync(guild=guild)
         events_logger.info('Command tree synced with specific guild')
 
-        queries.add_words(*self.bot.config.words)
-        queries.add_user_ids(*[member.id for member in self.bot.get_guild(self.bot.config.server_id).members])
+        queries.add_user_ids(*[member.id for member in self.bot.get_guild(self.bot.config.guild_id).members])
         queries.add_admins(*self.bot.config.admin_ids)
-        events_logger.info(
-            f'Initialized with {len(self.bot.config.words)} words and {len(self.bot.config.admin_ids)} admins'
-        )
+        events_logger.info(f'Initialized with {len(self.bot.config.admin_ids)} admins')
 
-        if not self.bot.config.disable_initial_scan:
-            await scan(self.bot, self.bot.config.server_id)
+        if self.bot.config.scan_history:
+            await scan(self.bot, self.bot.config.guild_id)
             events_logger.info('Initial scan completed')
 
         events_logger.info('Bot ready')
@@ -80,9 +77,10 @@ class Events(commands.Cog):
             text=', '.join(queries.get_words())
         )
 
-        await self.bot.get_channel(self.bot.config.channel_id).send(embed=new_user_embed)
+        if self.bot.config.welcome_channel_id:
+            await self.bot.get_channel(self.bot.config.welcome_channel_id).send(embed=new_user_embed)
 
-        await scan(self.bot, self.bot.config.server_id, target_user_id=member.id)
+        await scan(self.bot, self.bot.config.guild_id, target_user_id=member.id)
         events_logger.info('New user message sent')
 
     @commands.Cog.listener()

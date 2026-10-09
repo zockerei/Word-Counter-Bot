@@ -1,7 +1,14 @@
-from pathlib import Path
-import yaml
-import logging.config
+"""Bot settings, read from environment variables (a .env file is loaded first, if present)."""
+
+from __future__ import annotations
+
 import logging
+import logging.config
+import os
+from dataclasses import dataclass, field
+from pathlib import Path
+
+import yaml
 
 # Base directory of the project
 BASE_DIR = Path(__file__).resolve().parent
@@ -18,6 +25,61 @@ DB_PATH = 'sqlite:///' + str(BASE_DIR / 'instance' / 'word_counter.db')
 
 # Cog folder path
 COG_FOLDER_PATH = BASE_DIR / 'cogs'
+
+TRUE_VALUES = {"1", "true", "yes", "on"}
+FALSE_VALUES = {"0", "false", "no", "off", ""}
+
+
+class ConfigError(Exception):
+    """Raised when a setting is missing or invalid."""
+
+
+@dataclass(frozen=True)
+class Settings:
+    # The token is left out of repr so it never ends up in a log line.
+    token: str = field(repr=False)
+    guild_id: int
+    welcome_channel_id: int | None
+    admin_ids: frozenset[int]
+    scan_history: bool
+
+
+def load_settings() -> Settings:
+    """Read and validate all settings. Raises ConfigError with a readable message."""
+    welcome_channel = os.environ.get("WELCOME_CHANNEL_ID", "").strip()
+    return Settings(
+        token=_required("DISCORD_TOKEN"),
+        guild_id=_parse_id("GUILD_ID", _required("GUILD_ID")),
+        welcome_channel_id=_parse_id("WELCOME_CHANNEL_ID", welcome_channel) if welcome_channel else None,
+        admin_ids=frozenset(
+            _parse_id("ADMIN_IDS", part)
+            for part in os.environ.get("ADMIN_IDS", "").replace(" ", "").split(",")
+            if part
+        ),
+        scan_history=_parse_bool("SCAN_HISTORY", os.environ.get("SCAN_HISTORY", "")),
+    )
+
+
+def _required(name: str) -> str:
+    value = os.environ.get(name, "").strip()
+    if not value:
+        raise ConfigError(f"Missing {name}. Copy .env.example to .env and fill it in.")
+    return value
+
+
+def _parse_id(name: str, raw: str) -> int:
+    if not raw.isdigit():
+        raise ConfigError(f"{name} must be a Discord ID (a number), got {raw!r}.")
+    return int(raw)
+
+
+def _parse_bool(name: str, raw: str) -> bool:
+    value = raw.strip().lower()
+    if value in TRUE_VALUES:
+        return True
+    if value in FALSE_VALUES:
+        return False
+    raise ConfigError(f"{name} must be true or false, got {raw!r}.")
 
 
 class CustomFormatter(logging.Formatter):
@@ -49,11 +111,6 @@ def setup_logging():
 
     Reads the logging configuration from a YAML file and applies it.
     Updates the log file paths for rotating and error logs.
-
-    Raises:
-        FileNotFoundError: If the logging configuration file is not found.
-        yaml.YAMLError: If there is an error parsing the YAML file.
-        Exception: For any other unexpected errors.
     """
     try:
         with open(CONFIG_FOLDER_PATH / 'logging_config.yaml', 'r') as file:
@@ -65,71 +122,8 @@ def setup_logging():
 
         logging.config.dictConfig(config)
     except FileNotFoundError:
-        logging.error(f"Logging configuration file not found: {CONFIG_FOLDER_PATH / 'logging_config.yaml'}")
+        logging.error(f"Logging configuration not found: {CONFIG_FOLDER_PATH / 'logging_config.yaml'}")
     except yaml.YAMLError as e:
         logging.error(f"Error parsing YAML file: {e}")
     except Exception as e:
         logging.error(f"Unexpected error in Logging Configuration: {e}")
-
-
-class BotConfig:
-    """
-    Singleton class to load and provide bot configuration.
-
-    Attributes:
-        token (str): The bot token.
-        words (list): A list of words to track.
-        server_id (int): The ID of the server.
-        channel_id (int): The ID of the channel.
-        admin_ids (list): A list of admin user IDs.
-        disable_initial_scan (bool): Flag to disable initial scan.
-    """
-
-    _instance = None
-
-    def __new__(cls):
-        """
-        Creates a new instance of BotConfig if it doesn't exist.
-
-        Returns:
-            BotConfig: The singleton instance of BotConfig.
-        """
-        if cls._instance is None:
-            cls._instance = super(BotConfig, cls).__new__(cls)
-            cls._instance._load_config()
-        return cls._instance
-
-    def _load_config(self):
-        """
-        Loads configuration from a YAML file.
-
-        Raises:
-            FileNotFoundError: If the bot configuration file is not found.
-            yaml.YAMLError: If there is an error parsing the YAML file.
-            Exception: For any other unexpected errors.
-        """
-        try:
-            with open(CONFIG_FOLDER_PATH / 'bot_config.yaml', 'r') as config_file:
-                config = yaml.safe_load(config_file)
-                self.token = config['token']
-                self.words = config['words']
-                self.server_id = config['server_id']
-                self.channel_id = config['channel_id']
-                self.admin_ids = config['admin_ids']
-                self.disable_initial_scan = config.get('disable_initial_scan', True)
-        except FileNotFoundError:
-            logging.error(f"Bot configuration file not found: {CONFIG_FOLDER_PATH / 'bot_config.yaml'}")
-        except yaml.YAMLError as e:
-            logging.error(f"Error parsing YAML file: {e}")
-        except Exception as e:
-            logging.error(f"Unexpected error in Bot Configuration: {e}")
-
-
-def get_bot_config():
-    """
-    Gets the singleton instance of BotConfig.
-
-    Returns:
-        BotConfig: The singleton instance of BotConfig.
-    """
-    return BotConfig()
