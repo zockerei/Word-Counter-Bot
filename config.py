@@ -10,6 +10,8 @@ from pathlib import Path
 
 import yaml
 
+from database import asyncpg_url
+
 # Base directory of the project
 BASE_DIR = Path(__file__).resolve().parent
 
@@ -17,11 +19,6 @@ BASE_DIR = Path(__file__).resolve().parent
 LOG_FOLDER_PATH = BASE_DIR / 'logs'
 LOG_FOLDER_PATH.mkdir(parents=True, exist_ok=True)
 CONFIG_FOLDER_PATH = BASE_DIR / 'config'
-
-# Database file path
-DB_PATH = BASE_DIR / 'instance'
-DB_PATH.mkdir(parents=True, exist_ok=True)
-DB_PATH = 'sqlite:///' + str(BASE_DIR / 'instance' / 'word_counter.db')
 
 # Cog folder path
 COG_FOLDER_PATH = BASE_DIR / 'cogs'
@@ -42,6 +39,7 @@ class Settings:
     welcome_channel_id: int | None
     admin_ids: frozenset[int]
     scan_history: bool
+    database_url: str = field(repr=False)
 
 
 def load_settings() -> Settings:
@@ -57,6 +55,7 @@ def load_settings() -> Settings:
             if part
         ),
         scan_history=_parse_bool("SCAN_HISTORY", os.environ.get("SCAN_HISTORY", "")),
+        database_url=_parse_database_url(_required("DATABASE_URL")),
     )
 
 
@@ -71,6 +70,14 @@ def _parse_id(name: str, raw: str) -> int:
     if not raw.isdigit():
         raise ConfigError(f"{name} must be a Discord ID (a number), got {raw!r}.")
     return int(raw)
+
+
+def _parse_database_url(raw: str) -> str:
+    try:
+        asyncpg_url(raw)
+    except ValueError as exc:
+        raise ConfigError(f"DATABASE_URL is not valid: {exc}.") from None
+    return raw
 
 
 def _parse_bool(name: str, raw: str) -> bool:

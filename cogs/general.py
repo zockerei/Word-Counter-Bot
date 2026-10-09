@@ -2,7 +2,6 @@ import discord
 from discord.ext import commands
 from discord import Embed, Color, app_commands
 import logging
-import db.queries as queries
 
 bot_logger = logging.getLogger('cogs.general')
 
@@ -33,10 +32,10 @@ class GeneralCommands(commands.Cog):
                         f'Requester: {interaction.user.display_name}')
 
         converted_user_id = user.id
-        count_user_id = queries.get_count(converted_user_id, word)
+        count_user_id = await self.bot.db.get_count(converted_user_id, word)
         username = user.display_name
 
-        if count_user_id is None:
+        if not count_user_id:
             bot_logger.info(f'No count found for {username} with word: {word}')
             zero_count_embed = Embed(
                 title=f'{username} is clean',
@@ -53,10 +52,10 @@ class GeneralCommands(commands.Cog):
             color=Color.blue()
         )
 
-        highest_count_tuple = queries.get_highest_count_column(word)
-        highest_count_user = self.bot.get_user(highest_count_tuple[0]).display_name
+        highest_user_id, highest_count = (await self.bot.db.word_ranking(word))[0]
+        highest_count_user = self.bot.get_user(highest_user_id).display_name
         count_embed.set_footer(text=f'The person who has said {word} the most is '
-                                    f'{highest_count_user} with {highest_count_tuple[2]} times. '
+                                    f'{highest_count_user} with {highest_count} times. '
                                     'Imagine 🐕💦')
         await interaction.followup.send(embed=count_embed)
         bot_logger.debug('Count message sent')
@@ -72,9 +71,9 @@ class GeneralCommands(commands.Cog):
         """
         await interaction.response.defer()
         bot_logger.info(f'Highest count requested - Word: {word}, Requester: {interaction.user.display_name}')
-        highest_count_tuple = queries.get_highest_count_column(word)
+        ranking = await self.bot.db.word_ranking(word)
 
-        if highest_count_tuple is None:
+        if not ranking:
             bot_logger.info(f'No counts found for word: {word}')
             no_count_embed = Embed(
                 title='Dead Server',
@@ -85,12 +84,13 @@ class GeneralCommands(commands.Cog):
             await interaction.followup.send(embed=no_count_embed)
             return
 
-        bot_logger.debug(f'Highest count found - User: {highest_count_tuple[0]}, Count: {highest_count_tuple[2]}')
-        username = self.bot.get_user(highest_count_tuple[0]).display_name
+        highest_user_id, highest_count = ranking[0]
+        bot_logger.debug(f'Highest count found - User: {highest_user_id}, Count: {highest_count}')
+        username = self.bot.get_user(highest_user_id).display_name
         highest_count_embed = Embed(
             title='Highest count from all Users',
             description=f"""The user who has said {word} the most is {username}\n
-            With an impressive amount of {highest_count_tuple[2]} times""",
+            With an impressive amount of {highest_count} times""",
             color=Color.gold()
         )
         await interaction.followup.send(embed=highest_count_embed)
@@ -106,9 +106,9 @@ class GeneralCommands(commands.Cog):
         """
         await interaction.response.defer()
         bot_logger.info(f'Total highest count requested by {interaction.user.display_name}')
-        highest_count_result = queries.get_total_highest_count_column()
+        top = await self.bot.db.top_counts(1)
 
-        if highest_count_result is None:
+        if not top:
             bot_logger.info('No counts found in database')
             no_count_embed = Embed(
                 title='Dead Server',
@@ -119,6 +119,7 @@ class GeneralCommands(commands.Cog):
             await interaction.followup.send(embed=no_count_embed)
             return
 
+        highest_count_result = top[0]
         bot_logger.debug(f'Total highest count found - User: {highest_count_result[0]}, '
                          f'Word: {highest_count_result[1]}, Count: {highest_count_result[2]}')
         username = self.bot.get_user(highest_count_result[0]).display_name
@@ -141,7 +142,7 @@ class GeneralCommands(commands.Cog):
         """
         await interaction.response.defer()
         bot_logger.info(f'Show words requested by {interaction.user.display_name}')
-        words_database = queries.get_words()
+        words_database = await self.bot.db.get_words()
 
         words_embed = Embed(
             title='All words',
@@ -197,7 +198,7 @@ class GeneralCommands(commands.Cog):
                         f'Requester: {interaction.user.display_name}')
 
         user_id = member.id
-        word_counts = queries.get_user_word_counts(user_id)
+        word_counts = await self.bot.db.user_counts(user_id)
 
         if not word_counts:
             bot_logger.info(f'No word counts found for user: {member.display_name}')
@@ -232,7 +233,7 @@ class GeneralCommands(commands.Cog):
         bot_logger.info(f'Word user counts requested - Word: {word}, '
                         f'Requester: {interaction.user.display_name}')
 
-        user_counts = queries.get_word_user_counts(word)
+        user_counts = await self.bot.db.word_ranking(word)
 
         if not user_counts:
             bot_logger.info(f'No user counts found for word: {word}')

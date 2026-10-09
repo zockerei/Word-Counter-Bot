@@ -1,7 +1,6 @@
 from discord.ext import commands
 from discord import Color, Embed
 from unidecode import unidecode
-import db.queries as queries
 import logging
 import discord
 from logic import scan
@@ -46,10 +45,6 @@ class Events(commands.Cog):
         await self.bot.tree.sync(guild=guild)
         events_logger.info('Command tree synced with specific guild')
 
-        queries.add_user_ids(*[member.id for member in self.bot.get_guild(self.bot.config.guild_id).members])
-        queries.add_admins(*self.bot.config.admin_ids)
-        events_logger.info(f'Initialized with {len(self.bot.config.admin_ids)} admins')
-
         if self.bot.config.scan_history:
             await scan(self.bot, self.bot.config.guild_id)
             events_logger.info('Initial scan completed')
@@ -65,7 +60,6 @@ class Events(commands.Cog):
             member (discord.Member): The member who joined the server.
         """
         events_logger.info(f"Member joined - Name: {member.display_name}, ID: {member.id}")
-        queries.add_user_ids(member.id)
 
         username = member.display_name
         new_user_embed = Embed(
@@ -74,7 +68,7 @@ class Events(commands.Cog):
             Be aware of what you type {username}... 😳""",
             color=Color.blue()
         ).set_footer(
-            text=', '.join(queries.get_words())
+            text=', '.join(await self.bot.db.get_words())
         )
 
         if self.bot.config.welcome_channel_id:
@@ -98,7 +92,7 @@ class Events(commands.Cog):
         formatted_content = unidecode(message.content).lower()
         events_logger.debug(f'Processing message from {message.author.display_name} (ID: {message.author.id})')
 
-        current_words = queries.get_words()
+        current_words = await self.bot.db.get_words()
         for word in current_words:
             if word:
                 pattern = r'\b' + re.escape(word) + r'\b'
@@ -126,9 +120,8 @@ class Events(commands.Cog):
         word_count = len(matches)
         user_id = message.author.id
 
-        if queries.get_count(user_id, word) is None:
+        if await self.bot.db.add_count(user_id, word, word_count) == word_count:
             events_logger.debug(f'First time {user_id} has said {word}')
-            queries.update_user_count(user_id, word, word_count)
 
             username = message.author.display_name
 
@@ -140,9 +133,6 @@ class Events(commands.Cog):
             )
             await message.channel.send(embed=first_time_embed)
             events_logger.info(f'First time message sent: {username}, {word}')
-            return
-
-        queries.update_user_count(user_id, word, word_count)
 
 
 async def setup(bot):

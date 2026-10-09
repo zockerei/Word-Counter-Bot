@@ -1,6 +1,7 @@
 import discord
 import logging.config
 from config import ConfigError, setup_logging, COG_FOLDER_PATH, load_settings
+from database import Database
 from discord.ext import commands
 from dotenv import load_dotenv
 import os
@@ -31,11 +32,16 @@ bot.config = settings
 
 async def main():
     """
-    Loads all cog extensions and starts the Discord bot.
+    Opens the database, loads all cog extensions and starts the Discord bot.
     """
-    for filename in os.listdir(COG_FOLDER_PATH):
-        if filename.endswith('.py'):
-            await bot.load_extension(f'cogs.{filename[:-3]}')
-    await bot.start(bot.config.token)
+    bot.db = Database(settings.database_url)
+    try:
+        await bot.db.init()
+        for filename in os.listdir(COG_FOLDER_PATH):
+            if filename.endswith('.py'):
+                await bot.load_extension(f'cogs.{filename[:-3]}')
+        await bot.start(bot.config.token)
+    finally:
+        await bot.db.close()
 
 asyncio.run(main())

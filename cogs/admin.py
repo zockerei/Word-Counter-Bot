@@ -2,7 +2,6 @@ import discord
 from discord import Embed, Color, app_commands
 from discord.ext import commands
 import logging
-import db.queries as queries
 from logic import scan
 
 bot_logger = logging.getLogger('cogs.admin')
@@ -39,8 +38,8 @@ class AdminCommands(commands.Cog):
         await interaction.response.defer()
         bot_logger.info(f'Add word requested - Word: {word}, Admin: {interaction.user.display_name}')
 
-        if queries.check_user_is_admin(interaction.user.id):
-            queries.add_words(word)
+        if interaction.user.id in self.bot.config.admin_ids:
+            await self.bot.db.add_word(word)
             await scan(self.bot, self.bot.config.guild_id, target_word=word)
             bot_logger.info(f"Word '{word}' added and scanned by admin {interaction.user.display_name}")
 
@@ -69,8 +68,8 @@ class AdminCommands(commands.Cog):
         await interaction.response.defer()
         bot_logger.info(f'Remove word requested - Word: {word}, Admin: {interaction.user.display_name}')
 
-        if queries.check_user_is_admin(interaction.user.id):
-            queries.remove_word(word)
+        if interaction.user.id in self.bot.config.admin_ids:
+            await self.bot.db.remove_word(word)
             bot_logger.info(f"Word '{word}' removed by admin {interaction.user.display_name}")
 
             remove_word_embed = Embed(

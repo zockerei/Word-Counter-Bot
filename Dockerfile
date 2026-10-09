@@ -10,12 +10,11 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY *.py .
 COPY cogs cogs
-COPY db db
 COPY config config
 
 RUN useradd --system --no-create-home bot \
-    && mkdir logs instance \
-    && chown bot logs instance
+    && mkdir logs \
+    && chown bot logs
 USER bot
 
 # docker logs has no TTY, so colors are forced on. Set NO_COLOR=1 to turn them off.
