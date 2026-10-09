@@ -27,8 +27,11 @@ A Discord bot that counts how often each member says the words you choose.
 3. Under **OAuth2 → URL Generator**, select the `bot` and `applications.commands` scopes, and these permissions:
    - View Channels
    - Send Messages
+   - Send Messages in Threads
    - Embed Links
    - Read Message History
+
+   This is permission integer `274877991936`.
 4. Open the generated URL to add the bot to your server.
 
 To get a server or channel ID, turn on **Developer Mode** in Discord's advanced settings, then right-click the server or channel and choose **Copy ID**.
